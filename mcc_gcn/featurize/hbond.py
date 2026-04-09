@@ -1,5 +1,3 @@
-import ccdc
-
 DONOR_CHANGE_LIST = [
     ('sp C', True),
     ('sp2 C', True),
@@ -16,6 +14,7 @@ def change_hbond_criterion(
     donor_types_to_change=DONOR_CHANGE_LIST,
     acceptor_types_to_change=ACCEPTOR_CHANGE_LIST,
 ):
+    import ccdc
     if criterion is None:
         criterion = ccdc.molecule.Molecule.HBondCriterion()
     if donor_types_to_change:

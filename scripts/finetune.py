@@ -55,6 +55,7 @@ def main():
     )
     train_loader = DataLoader(
         [dataset[i] for i in train_idx], batch_size=args.batch_size, shuffle=True,
+        drop_last=True,
     )
     val_loader = DataLoader(
         [dataset[i] for i in val_idx], batch_size=args.batch_size, shuffle=False,

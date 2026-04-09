@@ -6,7 +6,6 @@ from torch_geometric.loader import DataLoader
 from torch_geometric.data import Data
 from tqdm import tqdm
 
-from ..featurize import Coformer, Cocrystal
 from ..utils import load_dict_compressed
 
 
@@ -53,6 +52,7 @@ class GraphDataset(Dataset):
         return sample
 
     def _process_one(self, items):
+        from ..featurize import Coformer, Cocrystal
         tag = items[4]
         block1 = self.mol_blocks[items[0]]
         block2 = self.mol_blocks[items[1]]
