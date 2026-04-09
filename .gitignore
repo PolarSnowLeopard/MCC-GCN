@@ -1,0 +1,11 @@
+__pycache__/
+*.pyc
+*.egg-info/
+dist/
+build/
+
+# Training artifacts
+checkpoints/
+
+# Large files (download separately, see README)
+data/HKU_data_5_total_inbalance.npz

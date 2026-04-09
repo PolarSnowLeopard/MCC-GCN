@@ -1,0 +1,112 @@
+Toluene
+4-Chlorotoluene
+diglyme
+DMSO-d6
+1,3,5-trichlorobenzene
+iodobenzene
+trichloromethane-d
+gamma-Butyrolactone
+1,1,2-trichloroethane
+ethoxyethane
+DL-sec-Butyl acetate
+formic acid
+methylamine
+iodomethane
+dimethyl sulfoxide
+p-Xylene
+methanamide
+3-methyl-1-butanol
+1-butanol
+Tetrahydrofuran
+bromobenzene
+cyclohexanone
+chlorobenzene
+dimethoxymethane
+1H-pyrrole
+Ethyl formate
+2-butanone
+2-butanol
+isobutanol
+N-Ethylmorpholine
+1,1,2,2-tetrachloroethane
+N,N,N',N'-Tetramethylethylenediamine
+propan-2-ol
+1,4-dioxane
+Ethanol
+2-methyl-2-propanol
+2-methylpyridine
+3-methylpyridine
+2-butoxyethanol
+diethylenetriamine
+2-methoxyethanol
+dibromomethane
+1-methyl-2-pyrrolidone
+N,N-dimethylacetamide
+2,2'-Dichlorodiethyl ether
+Methyl acetate
+cyclopentane
+benzyl alcohol
+benzene
+hexadecane
+water-d2
+nitromethane
+hexamethyldisiloxane
+Hexane
+1-Chloro-2-Methylpropane
+acetic anhydride
+propanenitrile
+acetamide
+acetic acid
+Ethylene glycol
+Diethylene glycol
+Isopropyl acetate
+Isopropyl ether
+tetrachloromethane
+acetone
+acetophenone
+nitrobenzene
+propionic acid
+1,2-Propanediol
+pentane
+1,1-Dichloroethane
+butane-1,4-diol
+1,3-dimethylbenzene
+1,2-dihydrostilbene
+N,N-diethylethanamine
+tribromomethane
+2-propoxyethanol
+1,2-Dichloroethane
+1-propanol
+water
+phenylamine
+heptane
+trichloromethane
+pyridine
+cyclohexene
+cyclohexane
+Methanol
+1,2-dimethoxyethane
+3-pentanone
+fluorobenzene
+epichlorohydrin
+acetonitrile
+dichloromethane
+methanedithione
+1-Octanol
+butanedioic acid
+N,N-dimethylformamide
+1,2-ethanediamine
+2,4-pentanedione
+o-Xylene
+Propylene glycol monomethyl ether acetate
+1,3,5-trimethylbenzene
+2-phenylacetonitrile
+2-Chlorotoluene
+1,2-dichlorobenzene
+isophorone
+morpholine
+nitric acid
+quinoline
+benzonitrile
+ethyl acetate
+benzene-d6
