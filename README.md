@@ -82,6 +82,25 @@ python scripts/evaluate.py \
     --large
 ```
 
+**Prediction (single sample, no CCDC needed):**
+
+```bash
+# From SMILES
+python scripts/predict.py \
+    --smiles "CN1C=NC2=C1C(=O)N(C(=O)N2C)C" "OC(=O)CC(=O)O" \
+    --model checkpoints/best_FT_model.pth --large
+
+# From CAS numbers
+python scripts/predict.py \
+    --cas "58-08-2" "141-82-2" \
+    --model checkpoints/best_FT_model.pth --large
+
+# From SDF files
+python scripts/predict.py \
+    --sdf mol1.sdf mol2.sdf \
+    --model checkpoints/best_FT_model.pth --large
+```
+
 The scripts automatically load pre-computed `.npz` features when available. If `.npz` is absent but `.csv` and `HKU_data.pkl.gz` exist, features will be rebuilt (requires CCDC). If neither is available, a clear error message will tell you which files to download.
 
 > **Note:** Training on CPU is supported but slow. For a quick test, use `--epochs 2`.
@@ -99,7 +118,8 @@ mcc-gcn/
 │   ├── data/                   # Data preparation scripts (require CCDC)
 │   ├── train.py                # Pre-training
 │   ├── finetune.py             # Fine-tuning
-│   └── evaluate.py             # Evaluation
+│   ├── evaluate.py             # Evaluation
+│   └── predict.py              # Single-sample prediction (no CCDC needed)
 ├── data/                       # Datasets, features, and mol blocks
 ├── pyproject.toml
 └── requirements.txt
