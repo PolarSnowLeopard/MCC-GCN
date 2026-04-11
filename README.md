@@ -60,7 +60,7 @@ Optional files (only needed with CCDC license for feature re-extraction):
 ```bash
 python scripts/train.py \
     --data data/HKU_data_5_total_inbalance \
-    --large --epochs 400 --batch-size 64
+    --epochs 400 --batch-size 64
 ```
 
 **Fine-tuning:**
@@ -69,8 +69,7 @@ python scripts/train.py \
 python scripts/finetune.py \
     --data data/HKU_data_6_FT_minoxidil_balanced_with_exp \
     --val-data data/HKU_data_6_experiment \
-    --pretrained checkpoints/best_model.pth \
-    --large
+    --pretrained checkpoints/best_model.pth
 ```
 
 **Evaluation:**
@@ -79,8 +78,7 @@ python scripts/finetune.py \
 python scripts/evaluate.py \
     --model checkpoints/best_FT_model.pth \
     --test-data-1 data/HKU_data_6_experiment_1 \
-    --test-data-2 data/HKU_data_6_experiment_2 \
-    --large
+    --test-data-2 data/HKU_data_6_experiment_2
 ```
 
 **Prediction (single sample, no CCDC needed):**
@@ -89,17 +87,17 @@ python scripts/evaluate.py \
 # From SMILES
 python scripts/predict.py \
     --smiles "CN1C=NC2=C1C(=O)N(C(=O)N2C)C" "OC(=O)CC(=O)O" \
-    --model checkpoints/best_FT_model.pth --large
+    --model checkpoints/best_FT_model.pth
 
 # From CAS numbers
 python scripts/predict.py \
     --cas "58-08-2" "141-82-2" \
-    --model checkpoints/best_FT_model.pth --large
+    --model checkpoints/best_FT_model.pth
 
 # From SDF files
 python scripts/predict.py \
     --sdf mol1.sdf mol2.sdf \
-    --model checkpoints/best_FT_model.pth --large
+    --model checkpoints/best_FT_model.pth
 ```
 
 The scripts automatically load pre-computed `.npz` features when available. If `.npz` is absent but `.csv` and `HKU_data.pkl.gz` exist, features will be rebuilt (requires CCDC). If neither is available, a clear error message will tell you which files to download.

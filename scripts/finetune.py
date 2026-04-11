@@ -4,8 +4,7 @@ Usage:
     python scripts/finetune.py \
         --data data/HKU_data_6_FT_minoxidil_balanced_with_exp \
         --val-data data/HKU_data_6_experiment \
-        --pretrained checkpoints/best_model.pth \
-        --large
+        --pretrained checkpoints/best_model.pth
 """
 import argparse
 import os
@@ -35,7 +34,6 @@ def parse_args():
     p.add_argument('--lr', type=float, default=3e-4)
     p.add_argument('--weight-decay', type=float, default=0.3)
     p.add_argument('--seed', type=int, default=12)
-    p.add_argument('--large', action='store_true')
     p.add_argument('--num-classes', type=int, default=4)
     p.add_argument('--train-layers', type=int, default=3,
                    help='Number of dense layers to unfreeze (1-3, or 0 for all)')
@@ -61,7 +59,7 @@ def main():
     print(f"Train: {len(train_dataset)}, Val: {len(val_dataset)}")
 
     # --- Load pre-trained model and freeze layers ---
-    model = GCNNet(num_classes=args.num_classes, is_large=args.large).to(device)
+    model = GCNNet(num_classes=args.num_classes).to(device)
     model.load_state_dict(torch.load(args.pretrained, map_location=device, weights_only=True))
     model.ft_setting(train_dense_layer=args.train_layers)
     print(f"Loaded pre-trained weights from {args.pretrained}")

@@ -9,34 +9,27 @@ class GCNNet(nn.Module):
 
     Args:
         num_classes: Number of output classes (4 for multi-class, 2 for binary).
-        is_large: Use larger hidden dimensions (v1/v2 config) if True.
     """
 
-    CONFIGS = {
-        False: dict(hidden1=128, hidden2=64, hidden3=64, readout=64, dense1=64, dense2=32),
-        True:  dict(hidden1=256, hidden2=256, hidden3=128, readout=128, dense1=128, dense2=64),
-    }
-
-    def __init__(self, num_classes=4, is_large=False):
+    def __init__(self, num_classes=4):
         super().__init__()
-        cfg = self.CONFIGS[is_large]
         self.input_dim = 34
         self.output_dim = num_classes
         self.dropout_rate = 0.208
 
-        self.conv1 = GCNConv(self.input_dim, cfg['hidden1'])
-        self.conv2 = GCNConv(cfg['hidden1'], cfg['hidden2'])
-        self.conv3 = GCNConv(cfg['hidden2'], cfg['hidden3'])
+        self.conv1 = GCNConv(self.input_dim, 256)
+        self.conv2 = GCNConv(256, 256)
+        self.conv3 = GCNConv(256, 128)
 
-        self.bn1 = nn.BatchNorm1d(cfg['hidden1'])
-        self.bn2 = nn.BatchNorm1d(cfg['hidden2'])
-        self.bn3 = nn.BatchNorm1d(cfg['hidden3'])
+        self.bn1 = nn.BatchNorm1d(256)
+        self.bn2 = nn.BatchNorm1d(256)
+        self.bn3 = nn.BatchNorm1d(128)
 
-        self.fc1 = nn.Linear(cfg['readout'], cfg['dense1'])
-        self.bn4 = nn.BatchNorm1d(cfg['dense1'])
-        self.fc2 = nn.Linear(cfg['dense1'], cfg['dense2'])
-        self.bn5 = nn.BatchNorm1d(cfg['dense2'])
-        self.fc_out = nn.Linear(cfg['dense2'], self.output_dim)
+        self.fc1 = nn.Linear(128, 128)
+        self.bn4 = nn.BatchNorm1d(128)
+        self.fc2 = nn.Linear(128, 64)
+        self.bn5 = nn.BatchNorm1d(64)
+        self.fc_out = nn.Linear(64, self.output_dim)
 
     def ft_setting(self, train_dense_layer=1):
         """Freeze parameters for fine-tuning, only training the last N dense layers."""

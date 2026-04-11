@@ -30,7 +30,6 @@ def parse_args():
     p.add_argument('--lr', type=float, default=3e-4)
     p.add_argument('--weight-decay', type=float, default=1e-4)
     p.add_argument('--seed', type=int, default=42)
-    p.add_argument('--large', action='store_true', help='Use large model config')
     p.add_argument('--num-classes', type=int, default=4)
     p.add_argument('--save-dir', type=str, default='checkpoints')
     return p.parse_args()
@@ -65,7 +64,7 @@ def main():
     print(f"Val distribution:   {np.bincount(val_labels)}")
 
     # --- Model ---
-    model = GCNNet(num_classes=args.num_classes, is_large=args.large).to(device)
+    model = GCNNet(num_classes=args.num_classes).to(device)
     criterion = nn.CrossEntropyLoss()
     optimizer = torch.optim.Adam(
         model.parameters(), lr=args.lr, weight_decay=args.weight_decay,

@@ -29,7 +29,6 @@ def parse_args():
     p.add_argument('--test-data-2', type=str, required=True, help='Test dataset (order B-A)')
     p.add_argument('--mol-blocks', type=str, default='data/HKU_data.pkl.gz')
     p.add_argument('--rebuild-features', action='store_true')
-    p.add_argument('--large', action='store_true')
     p.add_argument('--num-classes', type=int, default=4)
     p.add_argument('--seed', type=int, default=42)
     p.add_argument('--output', type=str, default='prediction_results.csv')
@@ -50,7 +49,7 @@ def main():
     test_loader_1 = load_test_data(args.test_data_1, args.mol_blocks, args.rebuild_features)
     test_loader_2 = load_test_data(args.test_data_2, args.mol_blocks, args.rebuild_features)
 
-    model = GCNNet(num_classes=args.num_classes, is_large=args.large).to(device)
+    model = GCNNet(num_classes=args.num_classes).to(device)
     model.load_state_dict(torch.load(args.model, map_location=device, weights_only=True))
     model.eval()
 

@@ -65,7 +65,6 @@ def parse_args():
     g.add_argument('--cas', nargs=2, metavar=('CAS1', 'CAS2'))
     g.add_argument('--sdf', nargs=2, metavar=('SDF1', 'SDF2'))
     p.add_argument('--model', type=str, default='checkpoints/best_FT_model.pth')
-    p.add_argument('--large', action='store_true')
     p.add_argument('--num-classes', type=int, default=4)
     return p.parse_args()
 
@@ -77,7 +76,7 @@ def main():
     c1, c2 = resolve_inputs(args)
     data = build_pyg_data(c1, c2)
 
-    model = GCNNet(num_classes=args.num_classes, is_large=args.large).to(device)
+    model = GCNNet(num_classes=args.num_classes).to(device)
     model.load_state_dict(torch.load(args.model, map_location=device, weights_only=True))
     model.eval()
 
