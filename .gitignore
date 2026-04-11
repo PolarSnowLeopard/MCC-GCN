@@ -18,7 +18,7 @@ data/FT_data.pkl.gz
 data/FT_data_extra.pkl.gz
 
 # Intermediate CSV files (not needed with pre-computed npz)
-data/*.csv
+# data/*.csv
 
 # Backup files
 data/*.bak
