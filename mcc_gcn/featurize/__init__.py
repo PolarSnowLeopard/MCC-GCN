@@ -1,9 +1,7 @@
 from .bond import Bond
 from .cocrystal import Cocrystal
-from .fingerprint import Fingerprint
 from .vertex_matrix import VertexMatrix
 from .adjacent_tensor import AdjacentTensor
-from .descriptors import compute_descriptors
 from .rdkit_coformer import RDKitCoformer
 
 _CCDC_LAZY = {

@@ -65,18 +65,12 @@ class GraphDataset(Dataset):
             result = {'tags': tag, 'labels': label}
             result['subgraph_size'] = np.array([c1.atom_number, c2.atom_number])
 
-            if self._use_desc:
-                result['global_state'] = cc.descriptors()
             if self._adj_type:
                 result['A'] = cc.CCGraphTensor(
                     t_type=self._adj_type, hbond=self._hbond,
                     pipi_stack=self._pipi_stack, contact=self._contact,
                 )
                 result['V'] = cc.VertexMatrix.feature_matrix()
-            if self._fp_type:
-                result['fingerprints'] = cc.Fingerprints(
-                    fp_type=self._fp_type, nBits=self._nBits, radii=self._radii,
-                )
             return result
         except Exception:
             print(f"Bad input sample: {tag}, skipped.")
@@ -108,17 +102,13 @@ class GraphDataset(Dataset):
         self.subgraph_size = self.subgraph_size.astype(np.int32)
 
     def make_graph_dataset(
-        self, Desc=0, A_type='OnlyCovalentBond', hbond=0, pipi_stack=0,
+        self, A_type='OnlyCovalentBond', hbond=0, pipi_stack=0,
         contact=0, max_graph_size=None, save_name=None,
     ):
-        self._use_desc = Desc
         self._adj_type = A_type
         self._hbond = hbond
         self._pipi_stack = pipi_stack
         self._contact = contact
-        self._fp_type = None
-        self._nBits = None
-        self._radii = None
 
         start = time.time()
         results = [

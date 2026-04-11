@@ -7,9 +7,7 @@ from ccdc import io
 
 from .atom import Atom
 from .bond import Bond
-from .descriptors import compute_descriptors
 from .adjacent_tensor import AdjacentTensor
-from .fingerprint import Fingerprint
 from .vertex_matrix import VertexMatrix
 
 HBondCriterion = ccdc.molecule.Molecule.HBondCriterion()
@@ -67,16 +65,9 @@ class Coformer:
             self.atoms[ix] = Atom(atom, self.csd_atoms[ix], hb_criterion=hb_criterion)
         self.atom_number = len(self.atoms)
 
-    def descriptors(self, includeSandP=True, charge_model='eem2015bm'):
-        return compute_descriptors(self, includeSandP=includeSandP, charge_model=charge_model)
-
     @property
     def AdjacentTensor(self):
         return AdjacentTensor(self.atoms, self.get_edges, self.atom_number)
-
-    @property
-    def Fingerprint(self):
-        return Fingerprint(self.rdkit_mol)
 
     @property
     def VertexMatrix(self):

@@ -1,9 +1,7 @@
 import numpy as np
 from scipy.sparse import coo_matrix
 
-from .descriptors import compute_descriptors
 from .adjacent_tensor import AdjacentTensor
-from .fingerprint import Fingerprint
 from .vertex_matrix import VertexMatrix
 
 
@@ -56,25 +54,6 @@ class Cocrystal:
         for (i, j), v in self.coformer2.get_edges.items():
             edges[(i + self.node_num1, j + self.node_num1)] = v
         return edges
-
-    def descriptors(self, includeSandP=True, charge_model='eem2015bm'):
-        d1 = self.coformer1.descriptors(includeSandP=includeSandP, charge_model=charge_model)
-        d2 = self.coformer2.descriptors(includeSandP=includeSandP, charge_model=charge_model)
-        return np.append(d1, d2, axis=0)
-
-    def Fingerprints(self, fp_type='ecfp', **kwargs):
-        fp1_ins = Fingerprint(self.coformer1.rdkit_mol)
-        fp2_ins = Fingerprint(self.coformer2.rdkit_mol)
-        fp_methods = {
-            'avalon': ('AvalonFP', 'AvalonFP'),
-            'ecfp': ('ECFP', 'ECFP'),
-            'maccs': ('MACCSkeysFP', 'MACCSkeysFP'),
-            'rdkit': ('RDKitFP', 'RDKitFP'),
-        }
-        m1, m2 = fp_methods[fp_type.lower()]
-        fp1 = getattr(fp1_ins, m1)(**kwargs)
-        fp2 = getattr(fp2_ins, m2)(**kwargs)
-        return np.append(fp1, fp2, axis=0)
 
     @property
     def possible_hbonds(self):
