@@ -5,7 +5,7 @@ Usage:
         --data data/HKU_data_6_FT_minoxidil_balanced_with_exp \
         --val-data data/HKU_data_6_experiment \
         --pretrained checkpoints/best_model.pth \
-        --large --epochs 200 --train-layers 1
+        --large
 """
 import argparse
 import os
@@ -30,14 +30,14 @@ def parse_args():
     p.add_argument('--mol-blocks', type=str, default='data/HKU_data.pkl.gz')
     p.add_argument('--pretrained', type=str, required=True, help='Path to pre-trained model')
     p.add_argument('--rebuild-features', action='store_true')
-    p.add_argument('--epochs', type=int, default=200)
-    p.add_argument('--batch-size', type=int, default=64)
-    p.add_argument('--lr', type=float, default=1e-4)
-    p.add_argument('--weight-decay', type=float, default=1e-4)
-    p.add_argument('--seed', type=int, default=42)
+    p.add_argument('--epochs', type=int, default=50)
+    p.add_argument('--batch-size', type=int, default=16)
+    p.add_argument('--lr', type=float, default=3e-4)
+    p.add_argument('--weight-decay', type=float, default=0.3)
+    p.add_argument('--seed', type=int, default=12)
     p.add_argument('--large', action='store_true')
     p.add_argument('--num-classes', type=int, default=4)
-    p.add_argument('--train-layers', type=int, default=1,
+    p.add_argument('--train-layers', type=int, default=3,
                    help='Number of dense layers to unfreeze (1-3, or 0 for all)')
     p.add_argument('--save-dir', type=str, default='checkpoints')
     return p.parse_args()

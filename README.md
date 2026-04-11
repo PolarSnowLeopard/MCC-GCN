@@ -70,7 +70,7 @@ python scripts/finetune.py \
     --data data/HKU_data_6_FT_minoxidil_balanced_with_exp \
     --val-data data/HKU_data_6_experiment \
     --pretrained checkpoints/best_model.pth \
-    --large --epochs 200 --train-layers 1
+    --large
 ```
 
 **Evaluation:**
