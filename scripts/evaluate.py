@@ -81,7 +81,7 @@ def main():
         if mask.sum() > 0:
             print(f"Class {i} Accuracy: {np.mean(all_preds[mask] == i):.4f}")
 
-    class_names = ['fail', 'salt', 'cocrystal', 'hydrate/solvate']
+    class_names = ['negative', 'salt', 'cocrystal', 'solvate']
     results = pd.DataFrame({
         'True Label': all_labels,
         'Predicted Label': all_preds,

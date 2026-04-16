@@ -4,10 +4,6 @@ __pycache__/
 dist/
 build/
 
-# Training artifacts (keep pre-trained weights)
-checkpoints/*
-!checkpoints/best_FT_model.pth
-
 # Large pre-training features (download separately, see README)
 data/HKU_data_5_total_inbalance.npz
 
@@ -22,4 +18,6 @@ data/*.csv
 
 # Backup files
 data/*.bak
-prediction_results.csv
+
+# Paper directory (not part of the code release)
+paper/

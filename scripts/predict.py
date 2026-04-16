@@ -19,7 +19,7 @@ from mcc_gcn.models.gcn import GCNNet
 from mcc_gcn.featurize.rdkit_coformer import RDKitCoformer
 from mcc_gcn.featurize.cocrystal import Cocrystal
 
-CLASS_NAMES = ['fail', 'salt', 'cocrystal', 'hydrate/solvate']
+CLASS_NAMES = ['negative', 'salt', 'cocrystal', 'solvate']
 
 
 def build_pyg_data(coformer1, coformer2):
@@ -69,21 +69,29 @@ def parse_args():
     return p.parse_args()
 
 
+def infer_single_direction(model, data, device):
+    """Run inference on a single PyG Data object, return probability vector."""
+    with torch.no_grad():
+        batch = torch.zeros(data.x.size(0), dtype=torch.long, device=device)
+        output = model(data.x.to(device), data.edge_index.to(device), batch)
+        return F.softmax(output, dim=1).cpu().numpy()[0]
+
+
 def main():
     args = parse_args()
     device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 
     c1, c2 = resolve_inputs(args)
-    data = build_pyg_data(c1, c2)
+    data_ab = build_pyg_data(c1, c2)
+    data_ba = build_pyg_data(c2, c1)
 
     model = GCNNet(num_classes=args.num_classes).to(device)
     model.load_state_dict(torch.load(args.model, map_location=device, weights_only=True))
     model.eval()
 
-    with torch.no_grad():
-        batch = torch.zeros(data.x.size(0), dtype=torch.long, device=device)
-        output = model(data.x.to(device), data.edge_index.to(device), batch)
-        probs = F.softmax(output, dim=1).cpu().numpy()[0]
+    probs_ab = infer_single_direction(model, data_ab, device)
+    probs_ba = infer_single_direction(model, data_ba, device)
+    probs = np.average([probs_ab, probs_ba], axis=0)
 
     pred_idx = int(np.argmax(probs))
 
