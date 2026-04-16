@@ -11,6 +11,14 @@ MCC-GCN extends cocrystal prediction from binary classification to **four-class 
 - **No CCDC required**: Pre-computed features and trained weights are provided — prediction works with SMILES input only
 - **Interpretable**: Gradient-based attribution identifies key functional groups driving crystal formation
 
+## System Requirements
+
+- **Operating system:** Linux (tested on Ubuntu 22.04), macOS, or Windows with WSL
+- **Python:** 3.9+
+- **Hardware:** No non-standard hardware required. CPU is sufficient for inference and fine-tuning. GPU (NVIDIA CUDA) is recommended for pre-training.
+- **Dependencies:** PyTorch, PyTorch Geometric, RDKit, OpenBabel, scikit-learn, NumPy, SciPy, pandas (see `requirements.txt` for full list with versions)
+- **Typical install time:** ~10 minutes on a normal desktop computer (including conda environment and dependency installation)
+
 ## Installation
 
 ```bash
@@ -74,7 +82,7 @@ python scripts/predict.py \
     --model checkpoints/best_FT_model.pth
 ```
 
-Expected output:
+Expected output (~5 seconds on a normal desktop CPU):
 
 ```
 Building molecular graph...
@@ -110,7 +118,7 @@ python scripts/evaluate.py \
     --test-data-2 data/HKU_data_6_experiment_2
 ```
 
-Expected output:
+Expected output (~30 seconds on a normal desktop CPU):
 
 ```
 Overall Accuracy: 0.5800

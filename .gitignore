@@ -19,5 +19,8 @@ data/*.csv
 # Backup files
 data/*.bak
 
+# Generated output files
+prediction_results.csv
+
 # Paper directory (not part of the code release)
 paper/
