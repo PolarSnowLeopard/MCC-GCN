@@ -1,5 +1,7 @@
 # MCC-GCN
 
+[![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.19612214.svg)](https://doi.org/10.5281/zenodo.19612214)
+
 **Multi-Component Crystal Graph Convolutional Network** — An interpretable graph learning framework for multicomponent crystal classification and discovery.
 
 MCC-GCN extends cocrystal prediction from binary classification to **four-class crystal form prediction** (cocrystal, salt, solvate, negative), and provides **gradient-based interpretability** at atomic resolution.
@@ -59,7 +61,7 @@ pip install -e .
 |------|------|-------------|
 | `HKU_data_5_total_inbalance.npz` | ~34 GB | Pre-training features (34,621 samples from CSD) |
 
-> **Download link:** [TODO: Zenodo DOI — upload pending]
+> **Download link:** Available via Zenodo upon publication. The code release is archived at [https://doi.org/10.5281/zenodo.19612214](https://doi.org/10.5281/zenodo.19612214).
 >
 > Place the file in `data/` after downloading.
 
@@ -208,6 +210,15 @@ If you find this work useful, please cite:
   journal={Nature Communications},
   year={2026},
   note={Under review}
+}
+
+@software{mccgcn_code,
+  author={Deng, Yuehua and Zhao, Fanyu and Zhou, Xinliang and Fu, Minqi and Chow, Stephanie and Wei, Zhi and Wen, Qingsong and Chow, Shing Fung},
+  title={PolarSnowLeopard/MCC-GCN: v1.0.0},
+  year={2026},
+  publisher={Zenodo},
+  doi={10.5281/zenodo.19612214},
+  url={https://doi.org/10.5281/zenodo.19612214}
 }
 ```
 
