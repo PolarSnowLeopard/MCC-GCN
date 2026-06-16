@@ -13,12 +13,15 @@ set -euo pipefail
 #   bash scripts/oss_sync.sh download-code
 #   bash scripts/oss_sync.sh upload-data data/HKU_data_5_total_inbalance.npz
 #   bash scripts/oss_sync.sh download-data
+#   bash scripts/oss_sync.sh download-pretrain-data
 
 OSS_PREFIX="${OSS_PREFIX:-oss://chat-algorithm-data/fg/zfy/mcc-gcn}"
 OSS_ENDPOINT="${OSS_ENDPOINT:-https://oss-cn-hangzhou.aliyuncs.com}"
 CODE_OBJECT="${CODE_OBJECT:-$OSS_PREFIX/code/MCC-GCN-latest.tar.gz}"
 DATA_PREFIX="${DATA_PREFIX:-$OSS_PREFIX/data}"
 ARTIFACT_PREFIX="${ARTIFACT_PREFIX:-$OSS_PREFIX/artifacts}"
+PRETRAIN_DATA_NAME="${PRETRAIN_DATA_NAME:-HKU_data_5_total_inbalance.npz}"
+PRETRAIN_DATA_OBJECT="${PRETRAIN_DATA_OBJECT:-$DATA_PREFIX/$PRETRAIN_DATA_NAME.zst}"
 
 oss_args=("-e" "$OSS_ENDPOINT")
 if [[ -n "${OSS_ACCESS_KEY_ID:-}" && -n "${OSS_ACCESS_KEY_SECRET:-}" ]]; then
@@ -99,6 +102,27 @@ download_data() {
   oss_cp -r -f "$DATA_PREFIX/" "$dest/"
 }
 
+download_pretrain_data() {
+  local dest="${1:-data}"
+  mkdir -p "$dest"
+  local target="$dest/$PRETRAIN_DATA_NAME"
+  local compressed="$target.zst"
+  if [[ -s "$target" ]]; then
+    echo "[download-pretrain-data] exists: $target"
+    return
+  fi
+  if ! command -v zstd >/dev/null 2>&1; then
+    echo "error: zstd is required to decompress $PRETRAIN_DATA_OBJECT" >&2
+    echo "install zstd, then retry: $0 download-pretrain-data $dest" >&2
+    exit 1
+  fi
+  echo "[download-pretrain-data] $PRETRAIN_DATA_OBJECT -> $compressed"
+  oss_cp -f "$PRETRAIN_DATA_OBJECT" "$compressed"
+  echo "[download-pretrain-data] decompress -> $target"
+  zstd -d -f -c "$compressed" > "$target"
+  ls -lh "$target" "$compressed"
+}
+
 upload_artifacts() {
   if [[ "$#" -eq 0 ]]; then
     set -- runs
@@ -143,6 +167,10 @@ case "${1:-}" in
     shift
     download_data "$@"
     ;;
+  download-pretrain-data)
+    shift
+    download_pretrain_data "$@"
+    ;;
   upload-artifacts)
     shift
     upload_artifacts "$@"
@@ -160,6 +188,8 @@ Commands:
   download-code [DEST]        Download code archive and sync into DEST/MCC-GCN
   upload-data PATH [...]      Upload data files/directories to OSS
   download-data [DEST]        Download OSS data prefix into DEST
+  download-pretrain-data [DEST]
+                              Download and decompress the large pretrain NPZ
   upload-artifacts [PATH ...] Upload runs/artifacts to OSS
   download-artifacts [DEST]   Download artifacts into DEST
 
@@ -168,6 +198,7 @@ Environment:
   OSS_ENDPOINT=$OSS_ENDPOINT
   OSS_ACCESS_KEY_ID=<optional if ossutil is configured>
   OSS_ACCESS_KEY_SECRET=<optional if ossutil is configured>
+  PRETRAIN_DATA_OBJECT=$PRETRAIN_DATA_OBJECT
 EOF
     exit 1
     ;;

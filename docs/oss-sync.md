@@ -65,6 +65,21 @@ ossutil config.
 
 ## Sync Data
 
+The large pretraining NPZ is stored in OSS as a compressed object to avoid
+transferring the 34GB padded file directly:
+
+```text
+oss://chat-algorithm-data/fg/zfy/mcc-gcn/data/HKU_data_5_total_inbalance.npz.zst
+```
+
+Download and decompress it on the cluster:
+
+```bash
+cd /workspace/MCC-GCN
+bash scripts/oss_sync.sh download-pretrain-data data
+ls -lh data/HKU_data_5_total_inbalance.npz
+```
+
 Upload selected data files:
 
 ```bash
