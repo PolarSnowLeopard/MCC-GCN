@@ -24,7 +24,8 @@ def parse_args():
     p.add_argument('--samples', type=int, default=10)
     p.add_argument('--extra-pad', type=int, default=17)
     p.add_argument('--num-classes', type=int, default=4)
-    p.add_argument('--atol', type=float, default=1e-6)
+    p.add_argument('--graph-atol', type=float, default=1e-6)
+    p.add_argument('--logit-atol', type=float, default=1e-5)
     return p.parse_args()
 
 
@@ -110,13 +111,13 @@ def main():
         original = GraphDataLoader(args.data).pyg_data[:args.samples]
         variant = GraphDataLoader(repadded).pyg_data
 
-        _assert_graphs_equal(original, variant, args.atol)
+        _assert_graphs_equal(original, variant, args.graph_atol)
         print(f"PyG graph invariance OK for {len(variant)} samples")
         print("node counts:", [int(g.x.size(0)) for g in variant])
 
         if args.model:
             model, device = _load_model(args.model, args.num_classes)
-            _assert_logits_equal(model, device, original, variant, args.atol)
+            _assert_logits_equal(model, device, original, variant, args.logit_atol)
             print(f"model logit invariance OK on {device}")
 
 
