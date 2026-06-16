@@ -115,8 +115,13 @@ def resolve_npz(data_path, mol_blocks_path=None, rebuild=False):
 
     Priority: existing .npz > rebuild from .csv + .pkl.gz (requires CCDC) > error.
     """
-    npz_path = data_path + '.npz'
-    csv_path = data_path + '.csv'
+    data_path = os.fspath(data_path)
+    if data_path.endswith('.npz'):
+        npz_path = data_path
+        csv_path = data_path[:-4] + '.csv'
+    else:
+        npz_path = data_path + '.npz'
+        csv_path = data_path + '.csv'
 
     if os.path.exists(npz_path) and not rebuild:
         print(f"Loading pre-computed features: {npz_path}")

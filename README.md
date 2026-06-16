@@ -111,7 +111,7 @@ python scripts/predict.py \
     --model checkpoints/best_FT_model.pth
 ```
 
-### Reproduce Paper Results (Table 2, four-class)
+### Evaluate an Existing Checkpoint
 
 ```bash
 python scripts/evaluate.py \
@@ -120,7 +120,13 @@ python scripts/evaluate.py \
     --test-data-2 data/HKU_data_6_experiment_2
 ```
 
-Expected output (~30 seconds on a normal desktop CPU):
+> **Important:** This branch trims padded nodes before converting NPZ features
+> to PyG graphs. The bundled checkpoint was trained with the legacy loader, so
+> its historical paper result is a legacy-padding baseline rather than the
+> expected result for this fixed-loader branch. Use the retraining workflow below
+> to produce a new checkpoint.
+
+Historical legacy-padding baseline (~30 seconds on a normal desktop CPU):
 
 ```
 Overall Accuracy: 0.5800
@@ -138,7 +144,8 @@ Class 3 Accuracy: 0.6364
 Results saved to prediction_results.csv
 ```
 
-These results correspond to the fine-tuned MCC-GCN row in **Table 2** and the confusion matrix in **Figure 3d** of the paper.
+These historical results correspond to the fine-tuned MCC-GCN row in **Table 2**
+and the confusion matrix in **Figure 3d** of the paper.
 
 ### Fine-tuning
 
@@ -158,6 +165,21 @@ python scripts/train.py \
     --data data/HKU_data_5_total_inbalance \
     --epochs 400 --batch-size 64
 ```
+
+### Full Retraining From NPZ Files (No CCDC)
+
+If you have the precomputed NPZ feature files, full retraining does not require
+CCDC:
+
+```bash
+python -m pip install -r requirements.txt
+python -m pip install -e . --no-deps
+
+bash scripts/retrain_from_npz.sh
+```
+
+See `docs/retraining-no-ccdc.md` for required files, environment notes, and
+cluster-friendly overrides.
 
 ## Model Architecture
 

@@ -1,0 +1,6 @@
+# Optional dependencies for rebuilding features from raw CCDC/mol-block data.
+#
+# The default training/evaluation path uses precomputed .npz files and does not
+# need these packages. Install this file only on a licensed CCDC workstation.
+-r requirements.txt
+csd-python-api>=3.0

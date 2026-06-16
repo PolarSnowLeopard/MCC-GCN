@@ -79,7 +79,7 @@ def main():
         optimizer, mode='min', factor=0.5, patience=3, min_lr=1e-5,
     )
 
-    best_val_bacc = 0.0
+    best_val_bacc = -1.0
     for epoch in range(1, args.epochs + 1):
         train_labels, train_preds, train_loss = train_epoch(
             model, train_loader, optimizer, criterion, device,
