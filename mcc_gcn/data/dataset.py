@@ -197,16 +197,30 @@ class GraphDataLoader:
 
     @staticmethod
     def _to_pyg(sample):
-        x = torch.tensor(sample['V'], dtype=torch.float32)
-        A = torch.tensor(sample['A'], dtype=torch.float32)
+        graph_size = sample.get('graph_size')
+        if graph_size is None:
+            node_count = sample['V'].shape[0]
+        else:
+            node_count = int(np.asarray(graph_size).item())
+        if node_count <= 0 or node_count > sample['V'].shape[0]:
+            raise ValueError(
+                f"Invalid graph_size={node_count} for padded width {sample['V'].shape[0]}"
+            )
+
+        V = sample['V'][:node_count]
+        A_np = sample['A'][:node_count, :, :node_count]
+
+        x = torch.as_tensor(V, dtype=torch.float32)
+        A = torch.as_tensor(A_np, dtype=torch.float32)
         edge_index = torch.nonzero(A.sum(1), as_tuple=False).t()
-        edge_attr = torch.tensor(
-            A[edge_index[0], :, edge_index[1]], dtype=torch.float32,
-        )
+        edge_attr = A[edge_index[0], :, edge_index[1]]
         y = torch.tensor(sample['label'], dtype=torch.long)
         pyg_data = Data(x=x, edge_index=edge_index, edge_attr=edge_attr, y=y)
         if sample.get('mask') is not None:
-            pyg_data.mask = torch.tensor(sample['mask'], dtype=torch.float32)
+            pyg_data.mask = torch.as_tensor(
+                sample['mask'][:node_count], dtype=torch.float32,
+            )
+        pyg_data.graph_size = torch.tensor(node_count, dtype=torch.long)
         return pyg_data
 
     def get_dataloader(self, batch_size=32, shuffle=True):
