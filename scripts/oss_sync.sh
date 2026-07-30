@@ -7,6 +7,8 @@ set -euo pipefail
 # ossutil globally, or export:
 #   OSS_ACCESS_KEY_ID=...
 #   OSS_ACCESS_KEY_SECRET=...
+# Alternatively, pass the complete argument string:
+#   OSS_ARGS='-e https://... -i ... -k ...'
 #
 # Common commands:
 #   bash scripts/oss_sync.sh upload-code
@@ -23,9 +25,13 @@ ARTIFACT_PREFIX="${ARTIFACT_PREFIX:-$OSS_PREFIX/artifacts}"
 PRETRAIN_DATA_NAME="${PRETRAIN_DATA_NAME:-HKU_data_5_total_inbalance.npz}"
 PRETRAIN_DATA_OBJECT="${PRETRAIN_DATA_OBJECT:-$DATA_PREFIX/$PRETRAIN_DATA_NAME.zst}"
 
-oss_args=("-e" "$OSS_ENDPOINT")
-if [[ -n "${OSS_ACCESS_KEY_ID:-}" && -n "${OSS_ACCESS_KEY_SECRET:-}" ]]; then
-  oss_args+=("-i" "$OSS_ACCESS_KEY_ID" "-k" "$OSS_ACCESS_KEY_SECRET")
+if [[ -n "${OSS_ARGS:-}" ]]; then
+  IFS=' ' read -r -a oss_args <<< "$OSS_ARGS"
+else
+  oss_args=("-e" "$OSS_ENDPOINT")
+  if [[ -n "${OSS_ACCESS_KEY_ID:-}" && -n "${OSS_ACCESS_KEY_SECRET:-}" ]]; then
+    oss_args+=("-i" "$OSS_ACCESS_KEY_ID" "-k" "$OSS_ACCESS_KEY_SECRET")
+  fi
 fi
 
 oss_cp() {

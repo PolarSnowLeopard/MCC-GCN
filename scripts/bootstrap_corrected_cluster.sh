@@ -46,9 +46,13 @@ as_root() {
   fi
 }
 
-oss_args=("-e" "$OSS_ENDPOINT")
-if [[ -n "${OSS_ACCESS_KEY_ID:-}" && -n "${OSS_ACCESS_KEY_SECRET:-}" ]]; then
-  oss_args+=("-i" "$OSS_ACCESS_KEY_ID" "-k" "$OSS_ACCESS_KEY_SECRET")
+if [[ -n "${OSS_ARGS:-}" ]]; then
+  IFS=' ' read -r -a oss_args <<< "$OSS_ARGS"
+else
+  oss_args=("-e" "$OSS_ENDPOINT")
+  if [[ -n "${OSS_ACCESS_KEY_ID:-}" && -n "${OSS_ACCESS_KEY_SECRET:-}" ]]; then
+    oss_args+=("-i" "$OSS_ACCESS_KEY_ID" "-k" "$OSS_ACCESS_KEY_SECRET")
+  fi
 fi
 
 oss_cp() {

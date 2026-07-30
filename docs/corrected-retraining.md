@@ -190,6 +190,9 @@ export GIT_REF=fix/data-pipeline-v2
 bash scripts/bootstrap_corrected_cluster.sh
 ```
 
+Alternatively, export one `OSS_ARGS='-e ... -i ... -k ...'` string. Do not
+store either form in the repository.
+
 The script installs system tools and CCDC-free Python packages, restores the
 checksummed data bundle, runs tests, and builds the covalent-only feature set.
 
