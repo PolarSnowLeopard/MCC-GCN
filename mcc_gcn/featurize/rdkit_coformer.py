@@ -10,6 +10,7 @@ from rdkit import Chem, RDConfig
 from rdkit.Chem import AllChem, ChemicalFeatures, rdmolops
 
 from .bond import Bond
+from .valence import get_atom_valence
 
 _FDEF_PATH = os.path.join(RDConfig.RDDataDir, 'BaseFeatures.fdef')
 _FEATURE_FACTORY = ChemicalFeatures.BuildFeatureFactory(_FDEF_PATH)
@@ -56,8 +57,8 @@ class _AtomFeatures:
         self.chirality = cip
         self.is_chiral = cip != ''
 
-        self.explicitvalence = rdkit_atom.GetExplicitValence()
-        self.implicitvalence = rdkit_atom.GetImplicitValence()
+        self.explicitvalence = get_atom_valence(rdkit_atom, "EXPLICIT")
+        self.implicitvalence = get_atom_valence(rdkit_atom, "IMPLICIT")
         self.totalnumHs = rdkit_atom.GetTotalNumHs()
         self.formalcharge = rdkit_atom.GetFormalCharge()
         self.radical_electrons = rdkit_atom.GetNumRadicalElectrons()

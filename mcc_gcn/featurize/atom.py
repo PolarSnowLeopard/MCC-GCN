@@ -1,6 +1,8 @@
 import numpy as np
 import ccdc
 
+from .valence import get_atom_valence
+
 HBondCriterion = ccdc.molecule.Molecule.HBondCriterion()
 
 
@@ -16,8 +18,8 @@ class AtomFeatures:
         self.hybridization = rdkit_atom.GetHybridization().__str__()
         self.chirality = csd_atom.chirality
         self.is_chiral = csd_atom.is_chiral
-        self.explicitvalence = rdkit_atom.GetExplicitValence()
-        self.implicitvalence = rdkit_atom.GetImplicitValence()
+        self.explicitvalence = get_atom_valence(rdkit_atom, "EXPLICIT")
+        self.implicitvalence = get_atom_valence(rdkit_atom, "IMPLICIT")
         self.totalnumHs = rdkit_atom.GetTotalNumHs()
         self.formalcharge = rdkit_atom.GetFormalCharge()
         self.radical_electrons = rdkit_atom.GetNumRadicalElectrons()
