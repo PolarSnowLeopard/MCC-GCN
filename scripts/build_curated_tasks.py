@@ -14,7 +14,11 @@ from rdkit import rdBase
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
 
 from mcc_gcn.data.curation import curate_pretraining_pairs
-from mcc_gcn.data.quality import DEFAULT_ALLOWED_ELEMENTS, read_pair_table
+from mcc_gcn.data.quality import (
+    DEFAULT_ALLOWED_ELEMENTS,
+    DEFAULT_ALLOWED_HYBRIDIZATIONS,
+    read_pair_table,
+)
 
 
 def parse_args():
@@ -108,6 +112,9 @@ def main():
             "rdkit": rdBase.rdkitVersion,
         },
         "model_allowed_elements": sorted(DEFAULT_ALLOWED_ELEMENTS),
+        "model_allowed_hybridizations": sorted(
+            DEFAULT_ALLOWED_HYBRIDIZATIONS
+        ),
         "inputs": {
             name: {
                 "path": str(Path(path)),

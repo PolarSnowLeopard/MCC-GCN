@@ -11,6 +11,8 @@ from pathlib import Path
 import pandas as pd
 from rdkit import Chem, rdBase
 
+from ..featurize.vertex_matrix import HYBRIDIZATION_TYPES
+
 PAIR_COLUMNS = [
     "reactant_A",
     "reactant_B",
@@ -29,6 +31,7 @@ REQUIRED_COLUMNS = {
 DEFAULT_ALLOWED_ELEMENTS = frozenset(
     {"C", "H", "O", "N", "P", "S", "F", "Cl", "Br", "I", "B"}
 )
+DEFAULT_ALLOWED_HYBRIDIZATIONS = frozenset(HYBRIDIZATION_TYPES)
 
 # Historical tables used solvate=4 before hydrate/solvate were merged, and
 # solvate=3 afterwards. Both encodings are valid inputs to the audit.
@@ -53,6 +56,7 @@ class MoleculeAudit:
     fragment_count: int | None
     heavy_atom_count: int | None
     elements: tuple[str, ...]
+    hybridizations: tuple[str, ...]
     error: str | None
 
 
@@ -99,14 +103,16 @@ def audit_smiles(smiles: str) -> MoleculeAudit:
     """Parse and sanitize one SMILES without changing its charge state."""
     smiles = str(smiles).strip()
     if not smiles:
-        return MoleculeAudit(None, None, None, None, None, (), "empty_smiles")
+        return MoleculeAudit(
+            None, None, None, None, None, (), (), "empty_smiles"
+        )
 
     try:
         with rdBase.BlockLogs():
             mol = Chem.MolFromSmiles(smiles, sanitize=False)
             if mol is None:
                 return MoleculeAudit(
-                    None, None, None, None, None, (), "parse_error"
+                    None, None, None, None, None, (), (), "parse_error"
                 )
             Chem.SanitizeMol(mol)
     except Exception as exc:  # noqa: BLE001 - RDKit exception types vary by build
@@ -117,9 +123,16 @@ def audit_smiles(smiles: str) -> MoleculeAudit:
             None,
             None,
             (),
+            (),
             f"sanitization_error:{type(exc).__name__}",
         )
 
+    hybridizations = {
+        "S" if str(atom.GetHybridization()) == "UNSPECIFIED" else str(
+            atom.GetHybridization()
+        )
+        for atom in mol.GetAtoms()
+    }
     return MoleculeAudit(
         canonical_smiles=Chem.MolToSmiles(
             mol, canonical=True, isomericSmiles=True
@@ -131,6 +144,7 @@ def audit_smiles(smiles: str) -> MoleculeAudit:
         fragment_count=len(Chem.GetMolFrags(mol)),
         heavy_atom_count=mol.GetNumHeavyAtoms(),
         elements=tuple(sorted({atom.GetSymbol() for atom in mol.GetAtoms()})),
+        hybridizations=tuple(sorted(hybridizations)),
         error=None,
     )
 
@@ -197,6 +211,14 @@ def audit_pair_table(
             if unsupported:
                 issues.append(
                     "unsupported_elements:" + ";".join(sorted(unsupported))
+                )
+            unsupported_hybridizations = (
+                set(row.A_hybridizations) | set(row.B_hybridizations)
+            ).difference(DEFAULT_ALLOWED_HYBRIDIZATIONS)
+            if unsupported_hybridizations:
+                issues.append(
+                    "unsupported_hybridizations:"
+                    + ";".join(sorted(unsupported_hybridizations))
                 )
             if row.A_canonical_smiles == row.B_canonical_smiles:
                 issues.append("identical_reactants")

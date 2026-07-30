@@ -39,7 +39,7 @@ class ClassWeightTest(unittest.TestCase):
             calculate_class_weights([0, 0], 2)
 
     def test_default_effective_number_materially_weights_current_imbalance(self):
-        weights = calculate_class_weights([0] * 1031 + [1] * 21455, 2)
+        weights = calculate_class_weights([0] * 1031 + [1] * 21447, 2)
         self.assertGreater(weights[0] / weights[1], 5)
         np.testing.assert_allclose(weights.mean(), 1.0)
 

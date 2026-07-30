@@ -7,7 +7,12 @@ from dataclasses import dataclass
 
 import pandas as pd
 
-from .quality import DEFAULT_ALLOWED_ELEMENTS, audit_pair_table
+from .quality import (
+    DEFAULT_ALLOWED_ELEMENTS,
+    DEFAULT_ALLOWED_HYBRIDIZATIONS,
+    audit_pair_table,
+    audit_smiles,
+)
 
 ACCEPTED_CSD_STATUSES = {
     "observed_neutral_pair",
@@ -43,6 +48,18 @@ def _elements_supported(row):
         value = str(row[f"{side}_elements"])
         elements.update(item for item in value.split(";") if item)
     return elements.issubset(DEFAULT_ALLOWED_ELEMENTS)
+
+
+def _hybridizations_supported(smiles, cache):
+    if smiles not in cache:
+        cache[smiles] = audit_smiles(smiles)
+    audit = cache[smiles]
+    return (
+        audit.error is None
+        and set(audit.hybridizations).issubset(
+            DEFAULT_ALLOWED_HYBRIDIZATIONS
+        )
+    )
 
 
 def _append_reason(table, mask, reason):
@@ -165,6 +182,23 @@ def curate_pretraining_pairs(
         csd,
         mechanically_eligible & ~supported,
         "unsupported_elements",
+    )
+    molecule_audits = {}
+    supported_hybridizations = [
+        _hybridizations_supported(smiles_a, molecule_audits)
+        and _hybridizations_supported(smiles_b, molecule_audits)
+        for smiles_a, smiles_b in zip(
+            csd["model_reactant_A"],
+            csd["model_reactant_B"],
+        )
+    ]
+    _append_reason(
+        csd,
+        mechanically_eligible & ~pd.Series(
+            supported_hybridizations,
+            index=csd.index,
+        ),
+        "unsupported_hybridization",
     )
     _append_reason(
         csd,

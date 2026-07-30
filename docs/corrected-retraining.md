@@ -53,20 +53,22 @@ selection, scheduler decisions, early stopping, or threshold selection.
 ## Current Data Counts
 
 The feature-compatible, mechanically eligible, and conflict-filtered
-pretraining pool contains 22,486 unique physical pairs:
+pretraining pool contains 22,478 unique physical pairs:
 
 | Four-class label | Pairs |
 | --- | ---: |
 | Failed | 1,031 |
-| Salt | 10,224 |
-| Cocrystal | 10,250 |
+| Salt | 10,223 |
+| Cocrystal | 10,243 |
 | Hydrate or solvate | 981 |
 
-The binary view contains 1,031 negative and 21,455 positive pairs. The frozen
+The binary view contains 1,031 negative and 21,447 positive pairs. The frozen
 90/10 physical-pair split has zero pair overlap. Both A/B rows remain in the
 same split. An additional 183 physical pairs containing silicon are
 quarantined because the historical 34-dimensional atom feature schema has no
-silicon channel.
+silicon channel. Eight more pairs are quarantined because their high-valence
+iodine or phosphorus atoms use RDKit's `SP2D` hybridization, which is absent
+from the same historical feature schema.
 
 ## Required Chemistry Review
 

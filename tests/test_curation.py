@@ -96,6 +96,34 @@ class CurationTest(unittest.TestCase):
             "unsupported_elements",
         )
 
+    def test_quarantines_hybridization_absent_from_atom_features(self):
+        row = csd_row(
+            "Cl[I@SP1](Cl)c1ccccc1",
+            "c1ccncc1",
+            "cocrystal",
+            2,
+            "SP2D1",
+        )
+        row["A_elements"] = "Cl;I;C;H"
+        row["B_elements"] = "C;H;N"
+        negative = pd.DataFrame(
+            columns=[
+                "reactant_A",
+                "reactant_B",
+                "label_str",
+                "label_int",
+                "identifier",
+                "source_file",
+                "source_row",
+            ]
+        )
+        result = curate_pretraining_pairs(pd.DataFrame([row]), negative)
+        self.assertTrue(result.four_class_pairs.empty)
+        self.assertEqual(
+            result.evidence.iloc[0]["curation_reasons"],
+            "unsupported_hybridization",
+        )
+
 
 if __name__ == "__main__":
     unittest.main()
