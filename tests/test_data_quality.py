@@ -5,14 +5,22 @@ from pathlib import Path
 import pandas as pd
 
 from mcc_gcn.data.quality import (
+    DEFAULT_ALLOWED_ELEMENTS,
     audit_pair_table,
     build_clean_pair_table,
     build_source_overlap_table,
     read_pair_table,
 )
+from mcc_gcn.featurize.vertex_matrix import ELEMENT_SYMBOLS
 
 
 class DataQualityTest(unittest.TestCase):
+    def test_quality_elements_match_model_feature_schema(self):
+        self.assertEqual(
+            DEFAULT_ALLOWED_ELEMENTS,
+            frozenset(ELEMENT_SYMBOLS),
+        )
+
     def test_reads_header_and_preserves_column_meaning(self):
         with tempfile.TemporaryDirectory() as tmp:
             path = Path(tmp) / "pairs.csv"
@@ -43,6 +51,27 @@ class DataQualityTest(unittest.TestCase):
         audited = audit_pair_table(table)
         self.assertFalse(audited.loc[0, "is_clean_candidate"])
         self.assertIn("sanitization_error", audited.loc[0, "issue_codes"])
+
+    def test_quarantines_element_missing_from_model_feature_schema(self):
+        table = pd.DataFrame(
+            [
+                {
+                    "reactant_A": "C[Si](C)C",
+                    "reactant_B": "CCO",
+                    "label_str": "cocrystal",
+                    "label_int": 2,
+                    "identifier": "SI01",
+                    "source_file": "pairs.csv",
+                    "source_row": 1,
+                }
+            ]
+        )
+        audited = audit_pair_table(table)
+        self.assertFalse(audited.loc[0, "is_clean_candidate"])
+        self.assertIn(
+            "unsupported_elements:Si",
+            audited.loc[0, "issue_codes"],
+        )
 
     def test_swapped_rows_collapse_after_pair_level_curation(self):
         table = pd.DataFrame(

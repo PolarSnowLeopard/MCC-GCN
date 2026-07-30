@@ -27,7 +27,7 @@ REQUIRED_COLUMNS = {
 }
 
 DEFAULT_ALLOWED_ELEMENTS = frozenset(
-    {"C", "H", "O", "N", "P", "S", "F", "Cl", "Br", "I", "Si"}
+    {"C", "H", "O", "N", "P", "S", "F", "Cl", "Br", "I", "B"}
 )
 
 # Historical tables used solvate=4 before hydrate/solvate were merged, and

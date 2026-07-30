@@ -52,19 +52,21 @@ selection, scheduler decisions, early stopping, or threshold selection.
 
 ## Current Data Counts
 
-The mechanically eligible and conflict-filtered pretraining pool contains
-22,669 unique physical pairs:
+The feature-compatible, mechanically eligible, and conflict-filtered
+pretraining pool contains 22,486 unique physical pairs:
 
 | Four-class label | Pairs |
 | --- | ---: |
 | Failed | 1,031 |
-| Salt | 10,261 |
-| Cocrystal | 10,388 |
-| Hydrate or solvate | 989 |
+| Salt | 10,224 |
+| Cocrystal | 10,250 |
+| Hydrate or solvate | 981 |
 
-The binary view contains 1,031 negative and 21,638 positive pairs. The frozen
+The binary view contains 1,031 negative and 21,455 positive pairs. The frozen
 90/10 physical-pair split has zero pair overlap. Both A/B rows remain in the
-same split.
+same split. An additional 183 physical pairs containing silicon are
+quarantined because the historical 34-dimensional atom feature schema has no
+silicon channel.
 
 ## Required Chemistry Review
 
@@ -138,9 +140,9 @@ DATASET_PROFILE=provisional-no-ccdc \
   bash scripts/package_corrected_data.sh
 
 bash scripts/oss_sync.sh upload-data \
-  dist/mcc-gcn-provisional-no-ccdc-v1-tables.tar.zst \
-  dist/mcc-gcn-provisional-no-ccdc-v1-tables.tar.zst.sha256 \
-  dist/mcc-gcn-provisional-no-ccdc-v1-tables.tar.zst.manifest.json
+  dist/mcc-gcn-provisional-no-ccdc-v2-tables.tar.zst \
+  dist/mcc-gcn-provisional-no-ccdc-v2-tables.tar.zst.sha256 \
+  dist/mcc-gcn-provisional-no-ccdc-v2-tables.tar.zst.manifest.json
 ```
 
 Restore and smoke-test them on a fresh GPU cluster:
@@ -163,7 +165,7 @@ OUTDIR=runs/provisional-no-ccdc-smoke \
 After chemistry approval:
 
 ```bash
-CURATION_ROOT=runs/data-curation-v1 \
+CURATION_ROOT=runs/data-curation-v2 \
 LOCKED_ROOT=data/corrected-v2/locked \
 OUTPUT=dist/mcc-gcn-corrected-v2-tables.tar.zst \
 bash scripts/package_corrected_data.sh

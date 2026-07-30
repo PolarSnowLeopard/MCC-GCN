@@ -23,7 +23,10 @@ def parse_args():
     parser.add_argument("--seed", type=int, default=42)
     parser.add_argument(
         "--reuse-split-manifest",
-        help="Reuse pair assignments from another task table.",
+        help=(
+            "Reuse pair assignments from another task table. The new table "
+            "may be a strict subset after additional quality filtering."
+        ),
     )
     return parser.parse_args()
 
@@ -34,6 +37,17 @@ def sha256_file(path):
         for chunk in iter(lambda: handle.read(1024 * 1024), b""):
             digest.update(chunk)
     return digest.hexdigest()
+
+
+def augment_pair_orders(table):
+    forward = table.copy()
+    forward["pair_order"] = "A_B"
+    reverse = table.copy()
+    reverse[["reactant_A", "reactant_B"]] = reverse[
+        ["reactant_B", "reactant_A"]
+    ]
+    reverse["pair_order"] = "B_A"
+    return pd.concat([forward, reverse], ignore_index=True)
 
 
 def main():
@@ -58,9 +72,13 @@ def main():
             args.reuse_split_manifest,
             keep_default_na=False,
         )
-        if set(reused["pair_key"]) != set(table["pair_key"]):
+        missing_assignments = set(table["pair_key"]).difference(
+            reused["pair_key"]
+        )
+        if missing_assignments:
             raise ValueError(
-                "Reused split manifest does not contain the same pair keys"
+                "Reused split manifest is missing "
+                f"{len(missing_assignments)} current pair keys"
             )
         reused_seeds = set(reused["seed"])
         reused_fractions = set(reused["validation_fraction"])
@@ -82,6 +100,9 @@ def main():
         split_source = {
             "path": str(Path(args.reuse_split_manifest)),
             "sha256": sha256_file(args.reuse_split_manifest),
+            "filtered_pair_keys": int(
+                len(set(reused["pair_key"]).difference(table["pair_key"]))
+            ),
         }
     else:
         split = grouped_stratified_split(
@@ -99,12 +120,16 @@ def main():
 
     output_dir = Path(args.output_dir)
     output_dir.mkdir(parents=True, exist_ok=True)
+    train_physical = table.loc[table["split"].eq("train")]
+    validation_physical = table.loc[table["split"].eq("validation")]
     outputs = {
         "physical_pairs_with_split.csv": table,
-        "train_physical_pairs.csv": table.loc[table["split"].eq("train")],
-        "validation_physical_pairs.csv": table.loc[
-            table["split"].eq("validation")
-        ],
+        "train_physical_pairs.csv": train_physical,
+        "validation_physical_pairs.csv": validation_physical,
+        "train_ordered_pairs.csv": augment_pair_orders(train_physical),
+        "validation_ordered_pairs.csv": augment_pair_orders(
+            validation_physical
+        ),
         "split_manifest.csv": split_manifest,
     }
     hashes = {}

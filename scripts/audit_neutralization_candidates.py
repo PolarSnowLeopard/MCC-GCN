@@ -12,6 +12,7 @@ from functools import lru_cache
 from pathlib import Path
 
 import pandas as pd
+from tqdm import tqdm
 
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
 
@@ -85,7 +86,12 @@ def main():
         )
 
     rows = []
-    for row in combined.itertuples(index=False):
+    for row in tqdm(
+        combined.itertuples(index=False),
+        total=len(combined),
+        desc="Auditing neutralization candidates",
+        unit="pair",
+    ):
         component_a = standardize_smiles(row.reactant_A)
         component_b = standardize_smiles(row.reactant_B)
         assessment = assess_standardized_pair(component_a, component_b)

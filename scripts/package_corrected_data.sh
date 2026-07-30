@@ -5,7 +5,7 @@ set -euo pipefail
 # are rebuilt on the GPU cluster without CCDC.
 
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
-CURATION_ROOT="${CURATION_ROOT:-$ROOT/runs/data-curation-v1}"
+CURATION_ROOT="${CURATION_ROOT:-$ROOT/runs/data-curation-v2}"
 DATASET_PROFILE="${DATASET_PROFILE:-final}"
 
 case "$DATASET_PROFILE" in
@@ -19,7 +19,7 @@ case "$DATASET_PROFILE" in
     ;;
   provisional-no-ccdc)
     LOCKED_ROOT="${LOCKED_ROOT:-$ROOT/data/corrected-v2/provisional-no-ccdc/locked}"
-    OUTPUT="${OUTPUT:-$ROOT/dist/mcc-gcn-provisional-no-ccdc-v1-tables.tar.zst}"
+    OUTPUT="${OUTPUT:-$ROOT/dist/mcc-gcn-provisional-no-ccdc-v2-tables.tar.zst}"
     locked_stage_path="data/corrected-v2/provisional-no-ccdc/locked"
     finetune_table="four_class_provisional_finetune_19_physical_pairs.csv"
     minoxidil_table="four_class_provisional_minoxidil_5_physical_pairs.csv"

@@ -75,6 +75,27 @@ class CurationTest(unittest.TestCase):
             2,
         )
 
+    def test_quarantines_elements_absent_from_atom_features(self):
+        row = csd_row("C[Si](C)C", "CCO", "cocrystal", 2, "SI1")
+        row["A_elements"] = "C;Si"
+        negative = pd.DataFrame(
+            columns=[
+                "reactant_A",
+                "reactant_B",
+                "label_str",
+                "label_int",
+                "identifier",
+                "source_file",
+                "source_row",
+            ]
+        )
+        result = curate_pretraining_pairs(pd.DataFrame([row]), negative)
+        self.assertTrue(result.four_class_pairs.empty)
+        self.assertEqual(
+            result.evidence.iloc[0]["curation_reasons"],
+            "unsupported_elements",
+        )
+
 
 if __name__ == "__main__":
     unittest.main()

@@ -9,11 +9,12 @@ import sys
 from pathlib import Path
 
 import pandas as pd
+from rdkit import rdBase
 
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
 
 from mcc_gcn.data.curation import curate_pretraining_pairs
-from mcc_gcn.data.quality import read_pair_table
+from mcc_gcn.data.quality import DEFAULT_ALLOWED_ELEMENTS, read_pair_table
 
 
 def parse_args():
@@ -101,7 +102,12 @@ def main():
         .sort_index()
     )
     manifest = {
-        "schema_version": "mcc-gcn-curated-task-pairs-v1",
+        "schema_version": "mcc-gcn-curated-task-pairs-v2",
+        "software": {
+            "pandas": pd.__version__,
+            "rdkit": rdBase.rdkitVersion,
+        },
+        "model_allowed_elements": sorted(DEFAULT_ALLOWED_ELEMENTS),
         "inputs": {
             name: {
                 "path": str(Path(path)),

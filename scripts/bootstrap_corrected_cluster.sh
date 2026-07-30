@@ -17,7 +17,7 @@ case "$DATASET_PROFILE" in
     locked_root="data/corrected-v2/locked"
     ;;
   provisional-no-ccdc)
-    DATA_OBJECT="${DATA_OBJECT:-$OSS_PREFIX/data/mcc-gcn-provisional-no-ccdc-v1-tables.tar.zst}"
+    DATA_OBJECT="${DATA_OBJECT:-$OSS_PREFIX/data/mcc-gcn-provisional-no-ccdc-v2-tables.tar.zst}"
     locked_root="data/corrected-v2/provisional-no-ccdc/locked"
     ;;
   *)
@@ -106,7 +106,8 @@ install_python_deps() {
   python -m pip install \
     -i "$PIP_INDEX_URL" \
     --extra-index-url "$PIP_EXTRA_INDEX_URL" \
-    numpy pandas scipy scikit-learn tqdm requests cirpy rdkit torch-geometric
+    numpy pandas scipy scikit-learn tqdm requests cirpy \
+    'rdkit==2025.9.2' torch-geometric
   python -m pip install -e "$REPO_DIR" --no-deps
   python - <<'PY'
 import torch
