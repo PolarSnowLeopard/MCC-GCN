@@ -181,6 +181,18 @@ bash scripts/retrain_from_npz.sh
 See `docs/retraining-no-ccdc.md` for required files, environment notes, and
 cluster-friendly overrides.
 
+### Corrected Data Rebuild
+
+The legacy CSV/NPZ files reproduce the historical baseline but contain known
+charge-standardization, duplicate-pair, and split-leakage problems. Do not use
+them as the source of truth for corrected retraining.
+
+Use `scripts/audit_data.py` for CCDC-free pair auditing,
+`scripts/ccdc/export_manifest.py` for immutable extraction on a licensed CCDC
+workstation, and `scripts/standardize_csd_export.py` for downstream RDKit
+standardization. The complete boundary, label-policy requirements, and output
+layout are documented in `docs/data-quality-rebuild.md`.
+
 ## Model Architecture
 
 MCC-GCN uses a graph convolutional network to learn from molecular pair graphs:

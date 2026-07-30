@@ -1,19 +1,19 @@
 import time
+
 import numpy as np
 import torch
 from torch.utils.data import Dataset
-from torch_geometric.loader import DataLoader
 from torch_geometric.data import Data
+from torch_geometric.loader import DataLoader
 from tqdm import tqdm
 
 from ..utils import load_dict_compressed
-
-
-EXCEPTION_TAGS = {
-    'BOVQUY', 'CEJPAK', 'GAWTON', 'GIPTAA', 'IDIGUY', 'LADBIB01',
-    'PIGXUY', 'SIFBIT', 'SOJZEW', 'TOFPOW', 'QOVZIK', 'RIJNEF',
-    'SIBFAK', 'SIBFEO', 'TOKGIJ', 'TOKGOP', 'TUQTEE', 'BEDZUF',
-}
+from .quality import (
+    PAIR_COLUMNS,
+    audit_smiles,
+    canonical_pair_key,
+    read_pair_table,
+)
 
 
 def _get_node_mask(graph_sizes, max_size=None):
@@ -29,15 +29,11 @@ class GraphDataset(Dataset):
     """Builds graph-level features from CSV reaction tables + mol block dictionaries."""
 
     def __init__(self, table_path, mol_blocks_path):
-        with open(table_path, 'r', encoding='utf-8') as f:
-            lines = f.readlines()
-        if lines and ',' in lines[0]:
-            header = lines[0].strip().split(',')
-            if any(h.isalpha() for h in header):
-                lines = lines[1:]
-        self.table = [line.strip().split(',') for line in lines if line.strip()]
+        table = read_pair_table(table_path)
+        self.table = table[PAIR_COLUMNS].astype(str).values.tolist()
         self.mol_blocks = load_dict_compressed(mol_blocks_path)
         self.data = []
+        self.rejections = []
 
     def __len__(self):
         return len(self.data)
@@ -52,17 +48,30 @@ class GraphDataset(Dataset):
         return sample
 
     def _process_one(self, items):
-        from ..featurize import Coformer, Cocrystal
         tag = items[4]
-        block1 = self.mol_blocks[items[0]]
-        block2 = self.mol_blocks[items[1]]
         try:
+            from ..featurize import Cocrystal, Coformer
+
+            molecule_a = audit_smiles(items[0])
+            molecule_b = audit_smiles(items[1])
+            if molecule_a.error or molecule_b.error:
+                raise ValueError(
+                    "SMILES validation failed: "
+                    f"A={molecule_a.error}, B={molecule_b.error}"
+                )
+
+            block1 = self.mol_blocks[items[0]]
+            block2 = self.mol_blocks[items[1]]
             c1 = Coformer(block1)
             c2 = Coformer(block2)
             cc = Cocrystal(c1, c2)
             label = int(items[3])
 
             result = {'tags': tag, 'labels': label}
+            result['pair_keys'] = canonical_pair_key(
+                molecule_a.canonical_smiles,
+                molecule_b.canonical_smiles,
+            )
             result['subgraph_size'] = np.array([c1.atom_number, c2.atom_number])
 
             if self._adj_type:
@@ -72,9 +81,18 @@ class GraphDataset(Dataset):
                 )
                 result['V'] = cc.VertexMatrix.feature_matrix()
             return result
-        except Exception:
-            print(f"Bad input sample: {tag}, skipped.")
-            return None
+        except Exception as exc:  # noqa: BLE001 - converted to a rejection record
+            return {
+                "_rejection": {
+                    "reactant_A": items[0],
+                    "reactant_B": items[1],
+                    "label_str": items[2],
+                    "label_int": items[3],
+                    "identifier": tag,
+                    "error_type": type(exc).__name__,
+                    "error": str(exc),
+                }
+            }
 
     def _preprocess(self, max_graph_size=None):
         graph_sizes = np.array([a.shape[0] for a in self.A]).astype(np.int32)
@@ -103,7 +121,7 @@ class GraphDataset(Dataset):
 
     def make_graph_dataset(
         self, A_type='OnlyCovalentBond', hbond=0, pipi_stack=0,
-        contact=0, max_graph_size=None, save_name=None,
+        contact=0, max_graph_size=None, save_name=None, strict=True,
     ):
         self._adj_type = A_type
         self._hbond = hbond
@@ -111,11 +129,21 @@ class GraphDataset(Dataset):
         self._contact = contact
 
         start = time.time()
-        results = [
-            self._process_one(items) for items in self.table
-            if items[-1] not in EXCEPTION_TAGS
+        processed = [self._process_one(items) for items in self.table]
+        self.rejections = [
+            item["_rejection"] for item in processed if "_rejection" in item
         ]
-        results = [r for r in results if r is not None]
+        if self.rejections and strict:
+            examples = "; ".join(
+                f"{item['identifier'] or '<no identifier>'}: "
+                f"{item['error_type']} ({item['error']})"
+                for item in self.rejections[:3]
+            )
+            raise ValueError(
+                f"Feature construction rejected {len(self.rejections)} "
+                f"of {len(self.table)} rows. Examples: {examples}"
+            )
+        results = [item for item in processed if "_rejection" not in item]
         if not results:
             raise ValueError("No valid data processed")
 
@@ -125,13 +153,13 @@ class GraphDataset(Dataset):
             for key in attr_names:
                 attrs[key].append(sample[key])
 
-        for key in attrs:
+        for key, values in attrs.items():
             if key in ('labels', 'graph_size'):
-                attrs[key] = np.array(attrs[key])
+                attrs[key] = np.array(values)
             else:
-                shapes = [np.array(x).shape for x in attrs[key]]
-                if len(set(str(s) for s in shapes)) == 1:
-                    attrs[key] = np.array(attrs[key])
+                shapes = [np.array(x).shape for x in values]
+                if len({str(shape) for shape in shapes}) == 1:
+                    attrs[key] = np.array(values)
                 else:
                     print(f"Warning: inconsistent shapes for {key}")
 
@@ -143,7 +171,8 @@ class GraphDataset(Dataset):
             save_dict = {
                 'V': self.V, 'A': self.A, 'labels': self.labels,
                 'masks': self.masks, 'graph_size': self.graph_size,
-                'tags': self.tags, 'subgraph_size': self.subgraph_size,
+                'tags': self.tags, 'pair_keys': self.pair_keys,
+                'subgraph_size': self.subgraph_size,
             }
             if hasattr(self, 'global_state'):
                 save_dict['global_state'] = self.global_state
@@ -154,13 +183,17 @@ class GraphDataset(Dataset):
             sample = {
                 'V': self.V[ix], 'A': self.A[ix], 'label': self.labels[ix],
                 'tag': tag, 'mask': self.masks[ix], 'graph_size': self.graph_size[ix],
+                'pair_key': self.pair_keys[ix],
                 'subgraph_size': self.subgraph_size[ix],
             }
             if hasattr(self, 'global_state'):
                 sample['global_state'] = self.global_state[ix]
             self.data.append(sample)
 
-        for attr in ['V', 'A', 'labels', 'masks', 'graph_size', 'tags', 'subgraph_size']:
+        for attr in [
+            'V', 'A', 'labels', 'masks', 'graph_size', 'tags', 'pair_keys',
+            'subgraph_size',
+        ]:
             self.__dict__.pop(attr, None)
         self.__dict__.pop('global_state', None)
 
@@ -192,6 +225,8 @@ class GraphDataLoader:
                 sample['global_state'] = data['global_state'][ix]
             if 'subgraph_size' in data:
                 sample['subgraph_size'] = data['subgraph_size'][ix]
+            if 'pair_keys' in data:
+                sample['pair_key'] = str(data['pair_keys'][ix])
 
             self.pyg_data.append(self._to_pyg(sample))
 
@@ -216,6 +251,8 @@ class GraphDataLoader:
         edge_attr = A[edge_index[0], :, edge_index[1]]
         y = torch.tensor(sample['label'], dtype=torch.long)
         pyg_data = Data(x=x, edge_index=edge_index, edge_attr=edge_attr, y=y)
+        if sample.get('pair_key') is not None:
+            pyg_data.pair_key = sample['pair_key']
         if sample.get('mask') is not None:
             pyg_data.mask = torch.as_tensor(
                 sample['mask'][:node_count], dtype=torch.float32,

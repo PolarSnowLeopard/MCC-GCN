@@ -1,14 +1,14 @@
-import pickle
 import gzip
-import random
-import numpy as np
-import torch
 import os
+import pickle
+import random
 from io import StringIO
 from pathlib import Path
 
-import requests
 import cirpy
+import numpy as np
+import requests
+import torch
 from rdkit import Chem
 from rdkit.Chem import AllChem
 
@@ -34,10 +34,12 @@ def load_dict_compressed(file_path):
 
 
 def smiles_to_standard(smiles):
-    mol = Chem.MolFromSmiles(smiles, sanitize=False)
+    mol = Chem.MolFromSmiles(smiles)
     if mol is None:
         return None
-    return Chem.MolToSmiles(mol, canonical=True)
+    return Chem.MolToSmiles(
+        mol, canonical=True, isomericSmiles=True
+    )
 
 
 def smiles_to_sdf_string(smiles):
@@ -53,7 +55,7 @@ def smiles_to_sdf_string(smiles):
         writer.write(mol)
         writer.close()
         return sio.getvalue()
-    except Exception as e:
+    except Exception as e:  # noqa: BLE001 - conversion helper returns failure
         print(f"SMILES to SDF conversion error: {e}")
         return None
 
@@ -74,7 +76,7 @@ def _cas_to_smiles_pubchem(cas):
         if resp2.status_code != 200:
             return None
         return resp2.json()['PropertyTable']['Properties'][0]['IsomericSMILES']
-    except Exception:
+    except Exception:  # noqa: BLE001 - remote resolver failures return None
         return None
 
 
@@ -105,7 +107,7 @@ def cas_to_smiles(cas):
         if smiles is None:
             return None
         return smiles_to_standard(smiles)
-    except Exception as e:
+    except Exception as e:  # noqa: BLE001 - CAS resolver failures return None
         print(f"Error with CAS {cas}: {e}")
         return None
 
@@ -147,14 +149,8 @@ def resolve_npz(data_path, mol_blocks_path=None, rebuild=False):
     return npz_path
 
 
-def remove_charges_from_sdf(input_sdf):
-    output_sdf = []
-    for line in input_sdf.split('\n'):
-        if line.startswith("M  CHG"):
-            continue
-        if line[-7:-1] == '      ':
-            new_line = line[:-1] + '0'
-            output_sdf.append(new_line)
-        else:
-            output_sdf.append(line)
-    return '\n'.join(output_sdf)
+def remove_charges_from_sdf(_input_sdf):
+    raise RuntimeError(
+        "Unsafe legacy charge stripping was removed. Preserve the observed "
+        "charged structure and use an explicit RDKit standardization policy."
+    )
