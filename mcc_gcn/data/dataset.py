@@ -183,7 +183,14 @@ class GraphDataset(Dataset):
             )
 
         start = time.time()
-        processed = [self._process_one(items) for items in self.table]
+        processed = [
+            self._process_one(items)
+            for items in tqdm(
+                self.table,
+                desc="Building graph features",
+                unit="pair",
+            )
+        ]
         self.rejections = [
             item["_rejection"] for item in processed if "_rejection" in item
         ]
