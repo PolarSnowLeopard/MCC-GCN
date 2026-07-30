@@ -28,6 +28,7 @@ esac
 DATA_SHA256_OBJECT="${DATA_SHA256_OBJECT:-$DATA_OBJECT.sha256}"
 BUILD_FEATURES="${BUILD_FEATURES:-1}"
 RUN_TESTS="${RUN_TESTS:-1}"
+SKIP_CODE_UPDATE="${SKIP_CODE_UPDATE:-0}"
 PIP_INDEX_URL="${PIP_INDEX_URL:-https://mirrors.aliyun.com/pypi/simple}"
 PIP_EXTRA_INDEX_URL="${PIP_EXTRA_INDEX_URL:-https://pypi.ngc.nvidia.com}"
 
@@ -80,6 +81,14 @@ install_tools() {
 }
 
 restore_code() {
+  if [[ "$SKIP_CODE_UPDATE" == "1" ]]; then
+    test -d "$REPO_DIR/.git" || {
+      echo "error: SKIP_CODE_UPDATE=1 requires $REPO_DIR/.git" >&2
+      exit 1
+    }
+    log "Skipping GitHub update; using existing checkout"
+    return
+  fi
   mkdir -p "$WORKSPACE"
   if [[ -d "$REPO_DIR/.git" ]]; then
     log "Updating existing checkout"
