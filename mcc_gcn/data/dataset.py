@@ -157,6 +157,144 @@ class GraphDataset(Dataset):
         self.graph_size = graph_sizes
         self.subgraph_size = self.subgraph_size.astype(np.int32)
 
+    def make_packed_graph_dataset(
+        self, A_type='OnlyCovalentBond', hbond=0, pipi_stack=0,
+        contact=0, save_name=None, strict=True,
+    ):
+        """Build and save graphs without dense cross-sample padding."""
+        if save_name is None:
+            raise ValueError("Packed graph construction requires save_name")
+
+        self._adj_type = A_type
+        self._hbond = hbond
+        self._pipi_stack = pipi_stack
+        self._contact = contact
+        coordinate_dependent = A_type.lower() in {
+            "allfeature",
+            "allfeaturebin",
+            "withbindistancematrix",
+            "withbinbistancematrix",
+            "withbondlenth",
+            "withdistancematrix",
+        }
+        if (
+            self.feature_source == "rdkit_smiles"
+            and self.rdkit_coordinate_mode == "2d"
+            and coordinate_dependent
+        ):
+            raise ValueError(
+                f"{A_type} requires rdkit_coordinate_mode='3d'"
+            )
+
+        start = time.time()
+        vertices = []
+        edge_indices = []
+        edge_attributes = []
+        labels = []
+        tags = []
+        pair_keys = []
+        subgraph_sizes = []
+        graph_sizes = []
+        node_ptr = [0]
+        edge_ptr = [0]
+        adjacency_channels = None
+
+        for items in tqdm(
+            self.table,
+            desc="Building packed graph features",
+            unit="pair",
+        ):
+            sample = self._process_one(items)
+            if "_rejection" in sample:
+                self.rejections.append(sample["_rejection"])
+                continue
+
+            vertex = np.asarray(sample["V"], dtype=np.float32)
+            adjacency = np.asarray(sample["A"], dtype=np.float32)
+            if adjacency.ndim != 3:
+                raise ValueError(
+                    f"Expected rank-3 adjacency, got {adjacency.shape}"
+                )
+            if (
+                adjacency.shape[0] != vertex.shape[0]
+                or adjacency.shape[2] != vertex.shape[0]
+            ):
+                raise ValueError(
+                    "Vertex and adjacency node dimensions differ: "
+                    f"V={vertex.shape}, A={adjacency.shape}"
+                )
+            if adjacency_channels is None:
+                adjacency_channels = adjacency.shape[1]
+            elif adjacency.shape[1] != adjacency_channels:
+                raise ValueError(
+                    "Adjacency channel count changed between samples"
+                )
+
+            source, target = np.nonzero(adjacency.sum(axis=1))
+            edge_index = np.vstack((source, target)).astype(
+                np.int32,
+                copy=False,
+            )
+            edge_attr = adjacency[
+                edge_index[0],
+                :,
+                edge_index[1],
+            ].astype(np.float32, copy=False)
+
+            vertices.append(vertex)
+            edge_indices.append(edge_index)
+            edge_attributes.append(edge_attr)
+            labels.append(sample["labels"])
+            tags.append(sample["tags"])
+            pair_keys.append(sample["pair_keys"])
+            subgraph_sizes.append(sample["subgraph_size"])
+            graph_sizes.append(vertex.shape[0])
+            node_ptr.append(node_ptr[-1] + vertex.shape[0])
+            edge_ptr.append(edge_ptr[-1] + edge_index.shape[1])
+
+        if self.rejections and strict:
+            examples = "; ".join(
+                f"{item['identifier'] or '<no identifier>'}: "
+                f"{item['error_type']} ({item['error']})"
+                for item in self.rejections[:3]
+            )
+            raise ValueError(
+                f"Feature construction rejected {len(self.rejections)} "
+                f"of {len(self.table)} rows. Examples: {examples}"
+            )
+        if not vertices:
+            raise ValueError("No valid data processed")
+
+        # Cached RDKit molecules are no longer needed before concatenation.
+        self._coformer_cache.clear()
+        save_dict = {
+            "storage_format": np.asarray("packed_sparse_v1"),
+            "V": np.concatenate(vertices, axis=0),
+            "node_ptr": np.asarray(node_ptr, dtype=np.int64),
+            "edge_index": np.concatenate(edge_indices, axis=1),
+            "edge_attr": np.concatenate(edge_attributes, axis=0),
+            "edge_ptr": np.asarray(edge_ptr, dtype=np.int64),
+            "labels": np.asarray(labels, dtype=np.int32),
+            "tags": np.asarray(tags, dtype=str),
+            "pair_keys": np.asarray(pair_keys, dtype=str),
+            "subgraph_size": np.asarray(
+                subgraph_sizes,
+                dtype=np.int32,
+            ),
+            "graph_size": np.asarray(graph_sizes, dtype=np.int32),
+            "adjacency_channels": np.asarray(
+                adjacency_channels,
+                dtype=np.int32,
+            ),
+        }
+        np.savez(save_name, **save_dict)
+        print(
+            "Packed graph artifact: "
+            f"{len(labels)} graphs, {node_ptr[-1]} nodes, "
+            f"{edge_ptr[-1]} directed edges"
+        )
+        print(f"Elapsed Time: {time.time() - start:.2f} s")
+
     def make_graph_dataset(
         self, A_type='OnlyCovalentBond', hbond=0, pipi_stack=0,
         contact=0, max_graph_size=None, save_name=None, strict=True,
@@ -272,6 +410,19 @@ class GraphDataLoader:
             return
 
         data = np.load(npz_file, allow_pickle=True)
+        storage_format = (
+            str(np.asarray(data["storage_format"]).item())
+            if "storage_format" in data
+            else "dense_padded_v1"
+        )
+        if storage_format == "packed_sparse_v1":
+            self._load_packed(data, label_mode)
+            return
+        if storage_format != "dense_padded_v1":
+            raise ValueError(
+                f"Unsupported graph storage format: {storage_format}"
+            )
+
         V_ = data['V']
         A_ = data['A']
         labels_ = data['labels']
@@ -296,6 +447,74 @@ class GraphDataLoader:
                 sample['pair_key'] = str(data['pair_keys'][ix])
 
             self.pyg_data.append(self._to_pyg(sample))
+
+    def _load_packed(self, data, label_mode):
+        vertices = data["V"]
+        node_ptr = data["node_ptr"]
+        edge_indices = data["edge_index"]
+        edge_attributes = data["edge_attr"]
+        edge_ptr = data["edge_ptr"]
+        labels = data["labels"]
+        tags = data["tags"]
+        graph_sizes = data["graph_size"]
+        pair_keys = data["pair_keys"] if "pair_keys" in data else None
+
+        graph_count = len(labels)
+        if len(node_ptr) != graph_count + 1:
+            raise ValueError("Packed node_ptr length does not match labels")
+        if len(edge_ptr) != graph_count + 1:
+            raise ValueError("Packed edge_ptr length does not match labels")
+        if int(node_ptr[-1]) != len(vertices):
+            raise ValueError("Packed node_ptr does not cover V")
+        if int(edge_ptr[-1]) != edge_indices.shape[1]:
+            raise ValueError("Packed edge_ptr does not cover edge_index")
+        if len(edge_attributes) != edge_indices.shape[1]:
+            raise ValueError("Packed edge_attr and edge_index differ")
+
+        for index in tqdm(
+            range(graph_count),
+            desc="Converting packed graphs to PyG Data",
+        ):
+            node_start = int(node_ptr[index])
+            node_end = int(node_ptr[index + 1])
+            edge_start = int(edge_ptr[index])
+            edge_end = int(edge_ptr[index + 1])
+            node_count = node_end - node_start
+            if int(graph_sizes[index]) != node_count:
+                raise ValueError(
+                    f"Packed graph_size mismatch at sample {index}"
+                )
+
+            label = int(labels[index])
+            if label_mode == "binary":
+                label = 0 if label == 0 else 1
+            pyg_data = Data(
+                x=torch.as_tensor(
+                    vertices[node_start:node_end],
+                    dtype=torch.float32,
+                ),
+                edge_index=torch.as_tensor(
+                    edge_indices[:, edge_start:edge_end],
+                    dtype=torch.long,
+                ),
+                edge_attr=torch.as_tensor(
+                    edge_attributes[edge_start:edge_end],
+                    dtype=torch.float32,
+                ),
+                y=torch.tensor(label, dtype=torch.long),
+            )
+            pyg_data.mask = torch.ones(
+                (node_count, 1),
+                dtype=torch.float32,
+            )
+            pyg_data.graph_size = torch.tensor(
+                node_count,
+                dtype=torch.long,
+            )
+            pyg_data.tag = str(tags[index])
+            if pair_keys is not None:
+                pyg_data.pair_key = str(pair_keys[index])
+            self.pyg_data.append(pyg_data)
 
     @staticmethod
     def _to_pyg(sample):

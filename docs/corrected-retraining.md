@@ -43,6 +43,9 @@ selection, scheduler decisions, early stopping, or threshold selection.
 - No class is downsampled. Effective-number loss weights retain every accepted
   physical pair.
 - Padded nodes are removed before PyG graph construction.
+- Corrected features use packed sparse NPZ storage, so feature generation and
+  loading do not materialize dataset-wide padded adjacency tensors. Historical
+  dense padded NPZ artifacts remain readable for baseline reproduction.
 - Frozen BatchNorm running statistics remain frozen during fine-tuning.
 - Fine-tuning selection uses an internal grouped validation split, then a fresh
   final fit uses all 34 pairs for the selected epoch count.

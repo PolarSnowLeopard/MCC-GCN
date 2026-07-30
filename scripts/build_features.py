@@ -40,6 +40,15 @@ def parse_args():
         default="2d",
     )
     parser.add_argument("--max-graph-size", type=int)
+    parser.add_argument(
+        "--storage-format",
+        choices=["packed-sparse", "dense-padded"],
+        default="packed-sparse",
+        help=(
+            "packed-sparse avoids cross-sample padding and is the default "
+            "for corrected PyG training."
+        ),
+    )
     return parser.parse_args()
 
 
@@ -81,15 +90,25 @@ def main():
         rdkit_coordinate_mode=args.rdkit_coordinate_mode,
     )
     try:
-        dataset.make_graph_dataset(
-            A_type=args.adjacency_type,
-            hbond=args.hbond,
-            pipi_stack=args.pipi_stack,
-            contact=args.contact,
-            max_graph_size=args.max_graph_size,
-            save_name=output_path,
-            strict=True,
-        )
+        build_args = {
+            "A_type": args.adjacency_type,
+            "hbond": args.hbond,
+            "pipi_stack": args.pipi_stack,
+            "contact": args.contact,
+            "save_name": output_path,
+            "strict": True,
+        }
+        if args.storage_format == "packed-sparse":
+            if args.max_graph_size is not None:
+                raise ValueError(
+                    "--max-graph-size applies only to dense-padded storage"
+                )
+            dataset.make_packed_graph_dataset(**build_args)
+        else:
+            dataset.make_graph_dataset(
+                max_graph_size=args.max_graph_size,
+                **build_args,
+            )
     except ValueError:
         write_rejections(rejection_path, dataset.rejections)
         raise
@@ -97,8 +116,33 @@ def main():
 
     features = np.load(output_path, allow_pickle=False)
     pair_keys = features["pair_keys"]
+    storage_format = (
+        str(np.asarray(features["storage_format"]).item())
+        if "storage_format" in features
+        else "dense_padded_v1"
+    )
+    if storage_format == "packed_sparse_v1":
+        node_feature_width = int(features["V"].shape[1])
+        adjacency_channels = int(features["edge_attr"].shape[1])
+        padded_width = None
+        total_nodes = int(features["node_ptr"][-1])
+        total_directed_edges = int(features["edge_ptr"][-1])
+    else:
+        node_feature_width = int(features["V"].shape[2])
+        adjacency_channels = int(features["A"].shape[2])
+        padded_width = int(features["V"].shape[1])
+        total_nodes = int(features["graph_size"].sum())
+        total_directed_edges = int(
+            sum(
+                np.count_nonzero(
+                    features["A"][index, :size, :, :size].sum(axis=1)
+                )
+                for index, size in enumerate(features["graph_size"])
+            )
+        )
+
     manifest = {
-        "schema_version": "mcc-gcn-graph-features-v1",
+        "schema_version": "mcc-gcn-graph-features-v2",
         "rdkit_version": rdBase.rdkitVersion,
         "input": {
             "path": str(Path(args.input)),
@@ -115,13 +159,17 @@ def main():
             "contact": args.contact,
             "rdkit_coordinate_mode": args.rdkit_coordinate_mode,
             "max_graph_size": args.max_graph_size,
+            "storage_format": args.storage_format,
         },
         "ordered_rows": int(len(features["labels"])),
         "physical_pairs": int(len(set(pair_keys.astype(str)))),
         "max_observed_graph_size": int(features["graph_size"].max()),
-        "padded_width": int(features["V"].shape[1]),
-        "node_feature_width": int(features["V"].shape[2]),
-        "adjacency_channels": int(features["A"].shape[2]),
+        "storage_format": storage_format,
+        "padded_width": padded_width,
+        "node_feature_width": node_feature_width,
+        "adjacency_channels": adjacency_channels,
+        "total_nodes": total_nodes,
+        "total_directed_edges": total_directed_edges,
         "label_counts": {
             str(label): int(count)
             for label, count in zip(
