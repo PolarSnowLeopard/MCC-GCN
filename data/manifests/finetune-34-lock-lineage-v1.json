@@ -1,0 +1,34 @@
+{
+  "ccdc_reexport_manifest": {
+    "path": "data/manifests/minoxidil-15-ccdc-reexport-v1.csv",
+    "sha256": "f7646ca4cca2b76b104c268e92c32f583f14b157ea9c74e945a113112a160a31"
+  },
+  "counts": {
+    "external_64:ready_rdkit:cocrystal:2": 3,
+    "external_64:ready_rdkit:failed:0": 3,
+    "external_64:ready_rdkit:hydrate:3": 3,
+    "external_64:ready_rdkit:salt:1": 5,
+    "minoxidil_20:ready_rdkit:failed:0": 5,
+    "minoxidil_20:requires_ccdc_reexport:cocrystal:2": 5,
+    "minoxidil_20:requires_ccdc_reexport:hydrate:3": 5,
+    "minoxidil_20:requires_ccdc_reexport:salt:1": 5
+  },
+  "inputs": {
+    "external_split_manifest": {
+      "path": "data/manifests/external-64-split-v1.csv",
+      "sha256": "07cdeae0ccf85f2666b7592cfeb9e3f8730583528f36d7cb3d93703214d45ea4"
+    },
+    "minoxidil_ordered_csv": {
+      "path": "/tmp/mcc-gcn-minoxidil-20-ordered.csv",
+      "sha256": "9b2ebde4db9f2d0cce63057c9b9feda8406cf5e77e595189e15af182830462e8"
+    }
+  },
+  "minoxidil_source_ref": "72cf8c7349aa01a9a053954d3bac025867e29bc0:data/HKU_data_6_FT_minoxidil_balanced.csv",
+  "output_csv": {
+    "path": "data/manifests/finetune-34-lock-v1.csv",
+    "sha256": "74b082884068e48791a10cbcd111383666fd8e66fb3f8c2e5e3d2a2de7ae8c08"
+  },
+  "physical_pairs": 34,
+  "requires_ccdc_reexport": 15,
+  "schema_version": "mcc-gcn-finetune-lock-v1"
+}

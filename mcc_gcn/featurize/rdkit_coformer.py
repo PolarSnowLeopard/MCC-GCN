@@ -107,26 +107,40 @@ def _get_edges(rdkit_mol):
     return edges
 
 
-def _mol_from_smiles(smiles):
+def _mol_from_smiles(smiles, coordinate_mode):
     mol = Chem.MolFromSmiles(smiles)
     if mol is None:
         raise ValueError(f"Invalid SMILES: {smiles}")
     mol = Chem.AddHs(mol)
-    params = AllChem.ETKDGv3()
-    params.randomSeed = 42
-    if AllChem.EmbedMolecule(mol, params) != 0:
-        if AllChem.EmbedMolecule(mol, randomSeed=42) != 0:
-            raise ValueError(f"Failed to generate 3D conformer: {smiles}")
-    AllChem.MMFFOptimizeMolecule(mol)
+    if coordinate_mode == '2d':
+        AllChem.Compute2DCoords(mol)
+    elif coordinate_mode == '3d':
+        params = AllChem.ETKDGv3()
+        params.randomSeed = 42
+        if AllChem.EmbedMolecule(mol, params) != 0:
+            if AllChem.EmbedMolecule(mol, randomSeed=42) != 0:
+                raise ValueError(f"Failed to generate 3D conformer: {smiles}")
+        if AllChem.MMFFHasAllMoleculeParams(mol):
+            AllChem.MMFFOptimizeMolecule(mol)
+        elif AllChem.UFFHasAllMoleculeParams(mol):
+            AllChem.UFFOptimizeMolecule(mol)
+    else:
+        raise ValueError("coordinate_mode must be '2d' or '3d'")
     return mol
 
 
 class RDKitCoformer:
     """Pure RDKit Coformer. Accepts SMILES, SDF file path, or mol block."""
 
-    def __init__(self, input_data, input_type='smiles', name=None):
+    def __init__(
+        self,
+        input_data,
+        input_type='smiles',
+        name=None,
+        coordinate_mode='3d',
+    ):
         if input_type == 'smiles':
-            self.rdkit_mol = _mol_from_smiles(input_data)
+            self.rdkit_mol = _mol_from_smiles(input_data, coordinate_mode)
             self.molname = name or input_data
         elif input_type == 'sdf':
             self.rdkit_mol = AllChem.MolFromMolFile(input_data, removeHs=False)
@@ -163,3 +177,34 @@ class RDKitCoformer:
     @property
     def aromatic_atoms(self):
         return [a.GetIdx() for a in self.rdkit_mol.GetAromaticAtoms()]
+
+    @property
+    def hbond_donors(self):
+        donors = {}
+        for index, atom in self.atoms.items():
+            if atom.feature.is_donor:
+                donors[index] = atom.get_adjHs
+        return donors
+
+    @property
+    def hbond_acceptors(self):
+        return [
+            index
+            for index, atom in self.atoms.items()
+            if atom.feature.is_acceptor
+        ]
+
+    @property
+    def get_DHs(self):
+        hydrogens = []
+        for donor_hydrogens in self.hbond_donors.values():
+            hydrogens.extend(donor_hydrogens)
+        return hydrogens
+
+    @property
+    def get_CHs(self):
+        hydrogens = []
+        for atom in self.atoms.values():
+            if atom.feature.symbol == 'C':
+                hydrogens.extend(atom.get_adjHs)
+        return hydrogens

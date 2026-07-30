@@ -1,8 +1,21 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-# End-to-end retraining from precomputed NPZ features. This path does not
-# require CCDC because it never rebuilds graph features from raw structures.
+# Frozen legacy compatibility workflow. It uses charge-damaged historical NPZ
+# files and cannot answer the corrected revision experiment. Require an
+# explicit opt-in so this script is not mistaken for the new training path.
+
+if [[ "${ALLOW_LEGACY_REPRODUCTION:-0}" != "1" ]]; then
+  cat >&2 <<'EOF'
+error: scripts/retrain_from_npz.sh is legacy baseline reproduction only.
+It retains known data-quality and split defects.
+
+For corrected experiments, follow docs/corrected-retraining.md.
+To reproduce the historical NPZ behavior explicitly, set:
+  ALLOW_LEGACY_REPRODUCTION=1
+EOF
+  exit 2
+fi
 
 OUTDIR="${OUTDIR:-runs/retrain-fixed-loader-$(date +%Y%m%d-%H%M%S)}"
 LOG="$OUTDIR/run.log"
@@ -49,6 +62,9 @@ run python scripts/check_padding_invariance.py \
 
 run python scripts/train.py \
   --data "$PRETRAIN_DATA" \
+  --legacy-row-split \
+  --class-weighting none \
+  --early-stopping-patience 0 \
   --epochs "$PRETRAIN_EPOCHS" \
   --batch-size "$PRETRAIN_BATCH_SIZE" \
   --lr "$PRETRAIN_LR" \
@@ -58,6 +74,9 @@ run python scripts/train.py \
 run python scripts/finetune.py \
   --data "$FT_DATA" \
   --val-data "$VAL_DATA" \
+  --legacy-row-split \
+  --manual-class-weights 1,1,1,2 \
+  --early-stopping-patience 0 \
   --pretrained "$OUTDIR/pretrain/best_model.pth" \
   --epochs "$FT_EPOCHS" \
   --batch-size "$FT_BATCH_SIZE" \

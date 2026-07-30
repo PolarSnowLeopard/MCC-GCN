@@ -1,5 +1,10 @@
 # Retraining Without CCDC
 
+> This document describes the frozen legacy-NPZ compatibility path. It does
+> not correct charge damage, pair leakage, holdout reuse, or class
+> downsampling. New revision experiments must use
+> `docs/corrected-retraining.md`.
+
 This workflow retrains MCC-GCN from precomputed `.npz` graph features. It does
 not require `ccdc` or a CCDC license.
 
@@ -40,10 +45,10 @@ python -m pip install -e . --no-deps
 
 Do not install `requirements-ccdc.txt` on machines without a CCDC license.
 
-## Full Retraining
+## Legacy Compatibility Retraining
 
 ```bash
-bash scripts/retrain_from_npz.sh
+ALLOW_LEGACY_REPRODUCTION=1 bash scripts/retrain_from_npz.sh
 ```
 
 Useful overrides:

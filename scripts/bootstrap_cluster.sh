@@ -209,6 +209,7 @@ run_retrain_smoke() {
   (
     cd "$REPO_DIR"
     OUTDIR="runs/smoke-bootstrap-$(date +%Y%m%d-%H%M%S)" \
+    ALLOW_LEGACY_REPRODUCTION=1 \
     PRETRAIN_EPOCHS=1 \
     FT_EPOCHS=1 \
     PRETRAIN_BATCH_SIZE=64 \

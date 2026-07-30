@@ -69,10 +69,20 @@ def main():
         "observed_smiles",
         "observed_inchi_key",
         "observed_formal_charge",
-        "parent_smiles",
-        "parent_inchi_key",
-        "parent_formal_charge",
-        "parent_changed",
+        "observed_charged_atom_count",
+        "observed_hydrogen_count",
+        "candidate_smiles",
+        "candidate_inchi_key",
+        "candidate_formal_charge",
+        "candidate_charged_atom_count",
+        "candidate_hydrogen_count",
+        "hydrogen_delta",
+        "candidate_changed",
+        "candidate_method",
+        "candidate_status",
+        "local_candidate_status",
+        "local_candidate_smiles",
+        "charge_parent_matches_local_candidate",
         "fragment_count",
         "heavy_atom_count",
         "radical_electrons",
@@ -90,8 +100,8 @@ def main():
         "has_disorder",
         "component_count",
         "standardized_component_count",
-        "distinct_parent_count",
-        "parent_inchi_keys",
+        "distinct_candidate_count",
+        "candidate_inchi_keys",
         "warning_count",
     ]
     reject_fields = [
@@ -181,12 +191,38 @@ def main():
                                 "observed_formal_charge": (
                                     result.observed_formal_charge
                                 ),
-                                "parent_smiles": result.parent_smiles,
-                                "parent_inchi_key": result.parent_inchi_key,
-                                "parent_formal_charge": (
-                                    result.parent_formal_charge
+                                "observed_charged_atom_count": (
+                                    result.observed_charged_atom_count
                                 ),
-                                "parent_changed": result.parent_changed,
+                                "observed_hydrogen_count": (
+                                    result.observed_hydrogen_count
+                                ),
+                                "candidate_smiles": result.candidate_smiles,
+                                "candidate_inchi_key": (
+                                    result.candidate_inchi_key
+                                ),
+                                "candidate_formal_charge": (
+                                    result.candidate_formal_charge
+                                ),
+                                "candidate_charged_atom_count": (
+                                    result.candidate_charged_atom_count
+                                ),
+                                "candidate_hydrogen_count": (
+                                    result.candidate_hydrogen_count
+                                ),
+                                "hydrogen_delta": result.hydrogen_delta,
+                                "candidate_changed": result.candidate_changed,
+                                "candidate_method": result.candidate_method,
+                                "candidate_status": result.candidate_status,
+                                "local_candidate_status": (
+                                    result.local_candidate_status
+                                ),
+                                "local_candidate_smiles": _join(
+                                    result.local_candidate_smiles
+                                ),
+                                "charge_parent_matches_local_candidate": (
+                                    result.charge_parent_matches_local_candidate
+                                ),
                                 "fragment_count": result.fragment_count,
                                 "heavy_atom_count": result.heavy_atom_count,
                                 "radical_electrons": result.radical_electrons,
@@ -196,11 +232,11 @@ def main():
                         )
 
                     warning_count += entry_warnings
-                    parent_keys = sorted(
+                    candidate_keys = sorted(
                         {
-                            result.parent_inchi_key
+                            result.candidate_inchi_key
                             for result in successful
-                            if result.parent_inchi_key
+                            if result.candidate_inchi_key
                         }
                     )
                     entry_writer.writerow(
@@ -227,8 +263,8 @@ def main():
                                 record.get("components", [])
                             ),
                             "standardized_component_count": len(successful),
-                            "distinct_parent_count": len(parent_keys),
-                            "parent_inchi_keys": _join(parent_keys),
+                            "distinct_candidate_count": len(candidate_keys),
+                            "candidate_inchi_keys": _join(candidate_keys),
                             "warning_count": entry_warnings,
                         }
                     )
@@ -238,7 +274,7 @@ def main():
         for path in args.inputs
     ]
     manifest = {
-        "schema_version": "mcc-gcn-standardized-components-v1",
+        "schema_version": "mcc-gcn-standardized-components-v3",
         "rdkit_version": rdBase.rdkitVersion,
         "inputs": input_files,
         "entry_count": entry_count,

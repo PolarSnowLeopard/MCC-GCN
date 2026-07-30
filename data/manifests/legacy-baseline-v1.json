@@ -1,0 +1,161 @@
+{
+  "schema_version": "mcc-gcn-legacy-baseline-v1",
+  "frozen_at": "2026-07-30",
+  "repositories": [
+    {
+      "commit": "d5d599b1cbbcb92d28dbbfb2435a7ab6ae26feeb",
+      "id": "mcc_gcn_paper_release",
+      "remote": "git@github.com:PolarSnowLeopard/MCC-GCN.git",
+      "role": "Open-source paper baseline"
+    },
+    {
+      "commit": "40951089ba698ea4ba9000f9eacc5e3cdb8f9d16",
+      "id": "mcc_gcn_full_history",
+      "remote": "git@github.com:PolarSnowLeopard/MCC-GCN.git",
+      "role": "Initial full snapshot containing private data-build scripts and CSV history"
+    },
+    {
+      "commit": "b8ed6db",
+      "id": "hku_csd_history",
+      "remote": "https://github.com/PolarSnowLeopard/HKU-CSD.git",
+      "role": "Early CSD extraction notebooks and original charged component assets"
+    },
+    {
+      "commit": "f5d4ba0",
+      "id": "ccdc_demo_experiments",
+      "remote": "git@github.com:PolarSnowLeopard/CCDC_Demo.git",
+      "role": "Executed binary and four-class training notebooks"
+    },
+    {
+      "commit": "e3c756f9081c89a8c99da8b87d5a7565683ece0e",
+      "id": "manuscript_overleaf",
+      "remote": "private-overleaf",
+      "role": "Submitted manuscript source"
+    }
+  ],
+  "artifacts": [
+    {
+      "id": "four_class_pretrained_checkpoint",
+      "path": "checkpoints/best_model.pth",
+      "repository": "mcc_gcn_paper_release",
+      "sha256": "076628576ae080a88c5fb8977924267f341a57c6b35bfb220c1b7fa8edf7b888",
+      "size_bytes": 555426,
+      "status": "verified"
+    },
+    {
+      "id": "four_class_finetuned_checkpoint",
+      "path": "checkpoints/best_FT_model.pth",
+      "repository": "mcc_gcn_paper_release",
+      "sha256": "7945aa2284aa305192eaace25a0fe94675b5e24f52c41df82e48e2d47e154e41",
+      "size_bytes": 556061,
+      "status": "verified"
+    },
+    {
+      "id": "four_class_finetune_features",
+      "path": "data/HKU_data_6_FT_minoxidil_balanced_with_exp.npz",
+      "repository": "mcc_gcn_paper_release",
+      "sha256": "dcdc89bb67f61591ffd7ee42296e5a6b5a0c4e09c5801ba0d72feed4ad54442b",
+      "size_bytes": 7729246,
+      "status": "verified"
+    },
+    {
+      "id": "four_class_holdout_forward_features",
+      "path": "data/HKU_data_6_experiment_1.npz",
+      "repository": "mcc_gcn_paper_release",
+      "sha256": "ffb6e2e3ae857f1bb72adde93855e8e4502379834776c29050c637fdcd2c970c",
+      "size_bytes": 4412726,
+      "status": "verified"
+    },
+    {
+      "id": "four_class_holdout_reverse_features",
+      "path": "data/HKU_data_6_experiment_2.npz",
+      "repository": "mcc_gcn_paper_release",
+      "sha256": "7ef8e5646cef4d247d08707a267b0e04d0a8d48069e757dc3bff3bc156cfd7b3",
+      "size_bytes": 4412726,
+      "status": "verified"
+    },
+    {
+      "id": "four_class_holdout_both_orders_features",
+      "path": "data/HKU_data_6_experiment.npz",
+      "repository": "mcc_gcn_paper_release",
+      "sha256": "0331f13309fbeb212f61ec617b7727addaf9d217b3db68f9bd94b04cd27f0f30",
+      "size_bytes": 8823726,
+      "status": "verified"
+    },
+    {
+      "id": "legacy_pretraining_feature_pool",
+      "path": "/mnt/vdb500/mcc-gcn-data/HKU_data_5_total_inbalance.npz",
+      "repository": "private_vpn_storage",
+      "sha256": "6f315e45d29eb1a4e11594c9234860623a3e4f9d695a614cab6c133849e27829",
+      "size_bytes": 36400335778,
+      "status": "verified"
+    },
+    {
+      "id": "original_charged_component_molblocks",
+      "path": "CCDC_data.pkl.gz",
+      "repository": "hku_csd_history",
+      "sha256": "5d519820fd92952d25707f2c3c0a17441c93adef3d3e8b3f548154ac01cc7b1a",
+      "size_bytes": 10666512,
+      "status": "verified"
+    },
+    {
+      "id": "original_charged_csd_pairs",
+      "path": "HKU_data_4_reactions.csv",
+      "repository": "hku_csd_history",
+      "sha256": "604b99d7b9595ee48b9b5cf08fa35595438df9d62010456673dfb43297fa1e93",
+      "size_bytes": 2436721,
+      "status": "verified"
+    },
+    {
+      "id": "four_class_executed_notebook",
+      "path": "5. Models.ipynb",
+      "repository": "ccdc_demo_experiments",
+      "sha256": "5c080f6bb310f693a7e75712d628177d73954df579c4d616bacee6467790ec23",
+      "size_bytes": 478828,
+      "status": "verified"
+    },
+    {
+      "id": "binary_executed_notebook",
+      "path": "10. Other_models.ipynb",
+      "repository": "ccdc_demo_experiments",
+      "sha256": "b1942b07febf17873c48fdfa1e78f0cb603a18d073e8f762203ccef2d135d2d4",
+      "size_bytes": 5827146,
+      "status": "verified"
+    }
+  ],
+  "known_invalid_artifacts": [
+    {
+      "id": "truncated_local_pretraining_npz",
+      "path": "outputs/mcc-gcn-oss/retrain-20260616/data-large/HKU_data_5_total_inbalance.npz",
+      "reason": "The local staging copy is exactly one MiB and is not a valid ZIP/NPZ file.",
+      "sha256": "d113c91fec2fabcfbbd4575ae497aa019d0364e8ba3f979a8440422d54c0e0e4",
+      "size_bytes": 1048576,
+      "status": "excluded"
+    }
+  ],
+  "dataset_roles": {
+    "external_experiment_total_physical_pairs": 64,
+    "fine_tune_external_physical_pairs": 14,
+    "fine_tune_minoxidil_physical_pairs": 20,
+    "fine_tune_total_physical_pairs": 34,
+    "fine_tune_total_ordered_rows": 68,
+    "holdout_total_physical_pairs": 50,
+    "holdout_total_ordered_rows": 100
+  },
+  "historical_four_class_result": {
+    "class_accuracy": [
+      0.4286,
+      0.5,
+      0.8333,
+      0.6364
+    ],
+    "confusion_matrix": [
+      [6, 2, 2, 4],
+      [0, 4, 3, 1],
+      [0, 1, 5, 0],
+      [2, 2, 4, 14]
+    ],
+    "loader": "legacy_padding",
+    "overall_accuracy": 0.58
+  }
+}

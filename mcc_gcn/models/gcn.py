@@ -9,27 +9,45 @@ class GCNNet(nn.Module):
 
     Args:
         num_classes: Number of output classes (4 for multi-class, 2 for binary).
+        model_size: Historical binary runs used ``small`` while four-class
+            runs used ``large``.
     """
 
-    def __init__(self, num_classes=4):
+    def __init__(self, num_classes=4, model_size="large"):
         super().__init__()
+        if model_size not in {"small", "large"}:
+            raise ValueError(f"Unknown model_size: {model_size}")
         self.input_dim = 34
         self.output_dim = num_classes
         self.dropout_rate = 0.208
+        self.model_size = model_size
+        if model_size == "large":
+            hidden_dim_1 = 256
+            hidden_dim_2 = 256
+            hidden_dim_3 = 128
+            dense_dim_1 = 128
+            dense_dim_2 = 64
+        else:
+            hidden_dim_1 = 128
+            hidden_dim_2 = 64
+            hidden_dim_3 = 64
+            dense_dim_1 = 64
+            dense_dim_2 = 32
 
-        self.conv1 = GCNConv(self.input_dim, 256)
-        self.conv2 = GCNConv(256, 256)
-        self.conv3 = GCNConv(256, 128)
+        self.conv1 = GCNConv(self.input_dim, hidden_dim_1)
+        self.conv2 = GCNConv(hidden_dim_1, hidden_dim_2)
+        self.conv3 = GCNConv(hidden_dim_2, hidden_dim_3)
 
-        self.bn1 = nn.BatchNorm1d(256)
-        self.bn2 = nn.BatchNorm1d(256)
-        self.bn3 = nn.BatchNorm1d(128)
+        self.bn1 = nn.BatchNorm1d(hidden_dim_1)
+        self.bn2 = nn.BatchNorm1d(hidden_dim_2)
+        self.bn3 = nn.BatchNorm1d(hidden_dim_3)
 
-        self.fc1 = nn.Linear(128, 128)
-        self.bn4 = nn.BatchNorm1d(128)
-        self.fc2 = nn.Linear(128, 64)
-        self.bn5 = nn.BatchNorm1d(64)
-        self.fc_out = nn.Linear(64, self.output_dim)
+        self.fc1 = nn.Linear(hidden_dim_3, dense_dim_1)
+        self.bn4 = nn.BatchNorm1d(dense_dim_1)
+        self.fc2 = nn.Linear(dense_dim_1, dense_dim_2)
+        self.bn5 = nn.BatchNorm1d(dense_dim_2)
+        self.fc_out = nn.Linear(dense_dim_2, self.output_dim)
+        self._frozen_batch_norms = ()
 
     def ft_setting(self, train_dense_layer=1):
         """Freeze parameters for fine-tuning, only training the last N dense layers."""
@@ -39,17 +57,43 @@ class GCNNet(nn.Module):
         if train_dense_layer == 1:
             for param in self.fc_out.parameters():
                 param.requires_grad = True
+            self._frozen_batch_norms = (
+                self.bn1,
+                self.bn2,
+                self.bn3,
+                self.bn4,
+                self.bn5,
+            )
         elif train_dense_layer == 2:
             for layer in [self.fc2, self.fc_out, self.bn5]:
                 for param in layer.parameters():
                     param.requires_grad = True
+            self._frozen_batch_norms = (
+                self.bn1,
+                self.bn2,
+                self.bn3,
+                self.bn4,
+            )
         elif train_dense_layer == 3:
             for layer in [self.fc1, self.fc2, self.fc_out, self.bn4, self.bn5]:
                 for param in layer.parameters():
                     param.requires_grad = True
+            self._frozen_batch_norms = (
+                self.bn1,
+                self.bn2,
+                self.bn3,
+            )
         else:
             for param in self.parameters():
                 param.requires_grad = True
+            self._frozen_batch_norms = ()
+
+    def train(self, mode=True):
+        super().train(mode)
+        if mode:
+            for layer in self._frozen_batch_norms:
+                layer.eval()
+        return self
 
     def forward(self, x, edge_index, batch):
         x = F.relu(self.bn1(self.conv1(x, edge_index)))

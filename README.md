@@ -168,18 +168,20 @@ python scripts/train.py \
 
 ### Full Retraining From NPZ Files (No CCDC)
 
-If you have the precomputed NPZ feature files, full retraining does not require
-CCDC:
+The historical NPZ files reproduce the submitted baseline but retain known
+charge, split-leakage, holdout-selection, and padding defects. They are not the
+input for corrected revision experiments.
+
+For the corrected CCDC-free cluster workflow, use:
 
 ```bash
-python -m pip install -r requirements.txt
-python -m pip install -e . --no-deps
-
-bash scripts/retrain_from_npz.sh
+bash scripts/bootstrap_corrected_cluster.sh
+bash scripts/run_corrected_experiments.sh
 ```
 
-See `docs/retraining-no-ccdc.md` for required files, environment notes, and
-cluster-friendly overrides.
+See `docs/corrected-retraining.md` for the chemistry-review gate, four-model
+experiment contract, provisional no-CCDC profile, OSS packaging, and cluster
+commands.
 
 ### Corrected Data Rebuild
 
@@ -192,6 +194,10 @@ Use `scripts/audit_data.py` for CCDC-free pair auditing,
 workstation, and `scripts/standardize_csd_export.py` for downstream RDKit
 standardization. The complete boundary, label-policy requirements, and output
 layout are documented in `docs/data-quality-rebuild.md`.
+
+The frozen legacy commits, checkpoint hashes, dataset roles, and known
+historical defects are recorded in `docs/legacy-baseline-freeze.md` and
+`data/manifests/legacy-baseline-v1.json`.
 
 ## Model Architecture
 
@@ -208,7 +214,13 @@ Input (34-dim atom features)
   → FC(64, 4) → Softmax
 ```
 
-**Output classes:** 0 = Negative, 1 = Salt, 2 = Cocrystal, 3 = Solvate
+**Output classes:** 0 = Negative, 1 = Salt, 2 = Cocrystal,
+3 = Hydrate/Solvate
+
+The historical binary experiments use the explicit `--model-size small`
+architecture (GCN 128 → 64 → 64; dense 64 → 32). Four-class experiments use
+`--model-size large`, shown above. The default remains `large` for checkpoint
+compatibility.
 
 **Bidirectional averaging:** During evaluation, each molecular pair is evaluated in both input orders (A-B and B-A), and the softmax probabilities are averaged before final classification.
 

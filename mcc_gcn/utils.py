@@ -112,10 +112,15 @@ def cas_to_smiles(cas):
         return None
 
 
-def resolve_npz(data_path, mol_blocks_path=None, rebuild=False):
+def resolve_npz(
+    data_path,
+    mol_blocks_path=None,
+    rebuild=False,
+    feature_source="auto",
+):
     """Resolve the .npz feature file for a dataset.
 
-    Priority: existing .npz > rebuild from .csv + .pkl.gz (requires CCDC) > error.
+    Priority: existing .npz > rebuild from CSV with CCDC or RDKit > error.
     """
     data_path = os.fspath(data_path)
     if data_path.endswith('.npz'):
@@ -134,17 +139,29 @@ def resolve_npz(data_path, mol_blocks_path=None, rebuild=False):
             f"Neither {npz_path} nor {csv_path} found.\n"
             f"Please download the data files first (see README)."
         )
-    if mol_blocks_path is None or not os.path.exists(mol_blocks_path):
+    has_mol_blocks = (
+        mol_blocks_path is not None and os.path.exists(mol_blocks_path)
+    )
+    if feature_source == "ccdc_molblock" and not has_mol_blocks:
         raise FileNotFoundError(
-            f"Pre-computed features {npz_path} not found, and mol blocks "
-            f"({mol_blocks_path}) unavailable for rebuilding.\n"
-            f"Please download the .npz files (see README), or provide "
-            f"HKU_data.pkl.gz to rebuild with CCDC."
+            f"CCDC MolBlocks requested but unavailable: {mol_blocks_path}"
+        )
+    resolved_source = feature_source
+    if feature_source == "auto":
+        resolved_source = (
+            "ccdc_molblock" if has_mol_blocks else "rdkit_smiles"
         )
 
-    print(f"Building graph features from {csv_path} (requires CCDC) ...")
+    print(
+        f"Building graph features from {csv_path} "
+        f"using {resolved_source} ..."
+    )
     from mcc_gcn.data.dataset import GraphDataset
-    ds = GraphDataset(csv_path, mol_blocks_path)
+    ds = GraphDataset(
+        csv_path,
+        mol_blocks_path if has_mol_blocks else None,
+        feature_source=resolved_source,
+    )
     ds.make_graph_dataset(save_name=npz_path)
     return npz_path
 

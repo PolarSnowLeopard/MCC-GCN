@@ -3,6 +3,9 @@
 The legacy CSV and NPZ artifacts remain useful for reproducing the published
 baseline, but they must not be treated as the source of truth for new training.
 
+The frozen baseline and first reproducible audit are recorded in
+`docs/legacy-baseline-freeze.md` and `docs/legacy-data-audit.md`.
+
 ## Confirmed Legacy Risks
 
 1. CCDC component SMILES were "neutralized" with string replacement:
@@ -43,6 +46,28 @@ It emits:
 
 The last file is only a mechanically clean candidate. It is not automatically
 approved training data. Chemistry and outcome labels still require review.
+
+Assess component-level neutralization candidates and pair-level charge/hydrogen
+conservation separately:
+
+```bash
+python scripts/audit_neutralization_candidates.py \
+  data/source/HKU_data_4_reactions.csv \
+  --component-molblocks data/source/CCDC_data.pkl.gz \
+  --output-dir runs/neutralization-audit
+```
+
+`balanced_monovalent_candidate` means only that:
+
+- RDKit produced two neutral components.
+- Each component's hydrogen change is the inverse of its formal charge.
+- Atom-local reverse proton-transfer enumeration produced a unique structure.
+- The local structure agrees with RDKit `ChargeParent`.
+
+`balanced_multivalent_candidate` passes the same mechanical checks but requires
+stronger stoichiometry and site review. Neither status approves a reactant
+structure. Candidate pairs with conflicting labels are emitted separately and
+cannot enter a training split.
 
 ## Rebuild Boundary
 
@@ -85,7 +110,8 @@ exit status so failed entries cannot be overlooked.
 Build separate representations instead of overwriting the observed structure:
 
 - `observed_structure`: exact CSD charge and protonation state
-- `standardized_parent`: deterministic RDKit standardization for pair identity
+- `neutral_parent_candidate`: deterministic RDKit candidate, never automatic
+  approval for a charged component
 - `model_structure`: explicitly selected representation used for features
 - `standardization_warnings`: every transformation and failure
 
@@ -98,8 +124,10 @@ python scripts/standardize_csd_export.py \
 ```
 
 The command uses CCDC MolBlocks first and only falls back to InChI or SMILES
-when necessary. It writes separate observed and charge-parent structures and
-fails with a non-zero status if any component cannot be standardized.
+when necessary. It writes separate observed structures and neutralization
+candidates, together with a candidate review status. A charged component is
+never promoted to a model structure by this command. It fails with a non-zero
+status if any component cannot be standardized.
 
 Group and split data by canonical unordered parent pair before any A/B
 augmentation. Preserve all CSD observations as evidence; do not silently choose

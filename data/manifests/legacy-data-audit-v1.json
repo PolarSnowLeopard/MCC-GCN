@@ -1,0 +1,107 @@
+{
+  "schema_version": "mcc-gcn-legacy-data-audit-v1",
+  "audited_at": "2026-07-30",
+  "audit_code_base_commit": "63fc65ff12e170dfc3e6e87e545ddd508f8652e9",
+  "software": {
+    "pandas": "2.3.3",
+    "rdkit": "2025.09.2",
+    "scikit_learn": "1.6.1"
+  },
+  "sources": [
+    {
+      "id": "original_charged_csd_pairs",
+      "path": "HKU-CSD/HKU_data_4_reactions.csv",
+      "sha256": "604b99d7b9595ee48b9b5cf08fa35595438df9d62010456673dfb43297fa1e93"
+    },
+    {
+      "id": "original_component_molblocks",
+      "path": "HKU-CSD/CCDC_data.pkl.gz",
+      "sha256": "5d519820fd92952d25707f2c3c0a17441c93adef3d3e8b3f548154ac01cc7b1a"
+    },
+    {
+      "id": "derived_reaction_table",
+      "path": "MCC-GCN@4095108/data/HKU_data_4_reactions_total.csv"
+    },
+    {
+      "id": "derived_pretraining_table",
+      "path": "MCC-GCN@4095108/data/HKU_data_5_total_inbalance.csv"
+    }
+  ],
+  "original_charged_csd_pairs": {
+    "clean_candidate_rows": 32275,
+    "conflicting_unordered_pairs": 194,
+    "duplicate_rows_by_unordered_pair": 1739,
+    "invalid_structure_rows": 930,
+    "label_counts": {
+      "cocrystal": 11301,
+      "hydrate": 810,
+      "salt": 21529,
+      "solvate": 522
+    },
+    "rows": 34162,
+    "rows_with_nonzero_formal_charge": 21494,
+    "rows_with_radicals": 528,
+    "unique_unordered_pairs": 31493
+  },
+  "original_component_molblocks": {
+    "charge_mismatches_when_both_parsed": 0,
+    "heavy_atom_mismatches_when_both_parsed": 0,
+    "molblock_parse_failures": 572,
+    "smiles_parse_failures": 547,
+    "unique_components": 19851
+  },
+  "neutralization_candidate_audit": {
+    "candidate_conflicting_rows": 571,
+    "candidate_conflicting_unordered_pairs": 241,
+    "mechanically_eligible_duplicate_rows": 1459,
+    "mechanically_eligible_rows": 23437,
+    "mechanically_eligible_unique_unordered_pairs": 21978,
+    "pair_candidate_status_counts": {
+      "balanced_monovalent_candidate": 10377,
+      "balanced_multivalent_candidate": 625,
+      "candidate_hydrogen_imbalance": 61,
+      "charge_parent_local_mismatch": 36,
+      "component_candidate_rejected": 3,
+      "component_parse_error": 2023,
+      "local_neutralization_ambiguous": 189,
+      "local_neutralization_unresolved": 81,
+      "observed_neutral_pair": 12435,
+      "stoichiometry_required": 3567,
+      "unresolved_charged_component": 4765
+    }
+  },
+  "derived_reaction_table": {
+    "invalid_structure_rows": 20781,
+    "rows": 34618,
+    "rows_with_nonzero_formal_charge": 0,
+    "rows_with_radicals": 19415
+  },
+  "derived_pretraining_table": {
+    "invalid_structure_rows": 41562,
+    "label_counts": {
+      "cocrystal": 22236,
+      "failed": 2104,
+      "salt": 31750,
+      "solvate": 13146
+    },
+    "rows": 69236,
+    "rows_with_nonzero_formal_charge": 0,
+    "rows_with_radicals": 38830,
+    "unique_unordered_pairs_by_literal_input": 32865
+  },
+  "legacy_row_split_replay": {
+    "random_state": 42,
+    "train_rows": 62312,
+    "validation_rows": 6924,
+    "validation_rows_with_unordered_pair_in_train": 6276,
+    "validation_unordered_pair_overlap_fraction": 0.9064124783362218,
+    "validation_only_unordered_pairs": 323
+  },
+  "source_overlap": {
+    "corrected_protocol_external_pairs_in_fine_tune": 14,
+    "legacy_initial_ft_csv_external_pair_overlap": 34,
+    "legacy_initial_ft_csv_physical_pairs": 54,
+    "negative_unique_pairs": 1041,
+    "negative_unique_pairs_overlapping_csd": 13
+  }
+}

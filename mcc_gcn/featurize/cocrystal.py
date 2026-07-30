@@ -99,9 +99,11 @@ class Cocrystal:
     def CCGraphTensor(self, t_type='OnlyCovalentBond', hbond=True, pipi_stack=False, contact=False):
         valid_types = {
             'allfeature', 'allfeaturebin', 'isringandconjugated', 'onlycovalentbond',
-            'withbinbistancematrix', 'withbondlenth', 'withdistancematrix',
+            'withbindistancematrix', 'withbondlenth', 'withdistancematrix',
         }
         t_lower = t_type.lower()
+        if t_lower == 'withbinbistancematrix':
+            t_lower = 'withbindistancematrix'
         if t_lower not in valid_types:
             raise ValueError(f"t_type must be one of {list(valid_types)}")
 

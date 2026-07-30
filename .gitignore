@@ -1,6 +1,7 @@
 __pycache__/
 *.pyc
 *.egg-info/
+.venv/
 dist/
 build/
 
@@ -12,6 +13,7 @@ data/CCDC_data.pkl.gz
 data/HKU_data.pkl.gz
 data/FT_data.pkl.gz
 data/FT_data_extra.pkl.gz
+data/corrected-v2/
 
 # Intermediate CSV files (not needed with pre-computed npz)
 data/*.csv
@@ -21,6 +23,7 @@ data/*.bak
 
 # Generated output files
 prediction_results.csv
+runs/
 
 # Paper directory (not part of the code release)
 paper/

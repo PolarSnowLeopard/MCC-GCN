@@ -28,10 +28,32 @@ def _get_node_mask(graph_sizes, max_size=None):
 class GraphDataset(Dataset):
     """Builds graph-level features from CSV reaction tables + mol block dictionaries."""
 
-    def __init__(self, table_path, mol_blocks_path):
+    def __init__(
+        self,
+        table_path,
+        mol_blocks_path=None,
+        *,
+        feature_source="auto",
+        rdkit_coordinate_mode="2d",
+    ):
         table = read_pair_table(table_path)
         self.table = table[PAIR_COLUMNS].astype(str).values.tolist()
-        self.mol_blocks = load_dict_compressed(mol_blocks_path)
+        if feature_source not in {"auto", "ccdc_molblock", "rdkit_smiles"}:
+            raise ValueError(f"Unknown feature_source: {feature_source}")
+        if feature_source == "auto":
+            feature_source = (
+                "ccdc_molblock" if mol_blocks_path else "rdkit_smiles"
+            )
+        if feature_source == "ccdc_molblock" and not mol_blocks_path:
+            raise ValueError("ccdc_molblock requires mol_blocks_path")
+        self.feature_source = feature_source
+        self.rdkit_coordinate_mode = rdkit_coordinate_mode
+        self.mol_blocks = (
+            load_dict_compressed(mol_blocks_path)
+            if feature_source == "ccdc_molblock"
+            else None
+        )
+        self._coformer_cache = {}
         self.data = []
         self.rejections = []
 
@@ -47,10 +69,28 @@ class GraphDataset(Dataset):
             }
         return sample
 
+    def _get_coformer(self, smiles):
+        if smiles in self._coformer_cache:
+            return self._coformer_cache[smiles]
+        if self.feature_source == "rdkit_smiles":
+            from ..featurize import RDKitCoformer
+
+            coformer = RDKitCoformer(
+                smiles,
+                input_type="smiles",
+                coordinate_mode=self.rdkit_coordinate_mode,
+            )
+        else:
+            from ..featurize import Coformer
+
+            coformer = Coformer(self.mol_blocks[smiles])
+        self._coformer_cache[smiles] = coformer
+        return coformer
+
     def _process_one(self, items):
         tag = items[4]
         try:
-            from ..featurize import Cocrystal, Coformer
+            from ..featurize import Cocrystal
 
             molecule_a = audit_smiles(items[0])
             molecule_b = audit_smiles(items[1])
@@ -60,10 +100,8 @@ class GraphDataset(Dataset):
                     f"A={molecule_a.error}, B={molecule_b.error}"
                 )
 
-            block1 = self.mol_blocks[items[0]]
-            block2 = self.mol_blocks[items[1]]
-            c1 = Coformer(block1)
-            c2 = Coformer(block2)
+            c1 = self._get_coformer(items[0])
+            c2 = self._get_coformer(items[1])
             cc = Cocrystal(c1, c2)
             label = int(items[3])
 
@@ -127,6 +165,22 @@ class GraphDataset(Dataset):
         self._hbond = hbond
         self._pipi_stack = pipi_stack
         self._contact = contact
+        coordinate_dependent = A_type.lower() in {
+            "allfeature",
+            "allfeaturebin",
+            "withbindistancematrix",
+            "withbinbistancematrix",
+            "withbondlenth",
+            "withdistancematrix",
+        }
+        if (
+            self.feature_source == "rdkit_smiles"
+            and self.rdkit_coordinate_mode == "2d"
+            and coordinate_dependent
+        ):
+            raise ValueError(
+                f"{A_type} requires rdkit_coordinate_mode='3d'"
+            )
 
         start = time.time()
         processed = [self._process_one(items) for items in self.table]
@@ -203,8 +257,10 @@ class GraphDataset(Dataset):
 class GraphDataLoader:
     """Loads pre-computed npz features and converts to PyG Data objects."""
 
-    def __init__(self, npz_file=None):
+    def __init__(self, npz_file=None, label_mode="stored"):
         self.pyg_data = []
+        if label_mode not in {"stored", "binary"}:
+            raise ValueError(f"Unknown label_mode: {label_mode}")
         if npz_file is None:
             return
 
@@ -217,10 +273,14 @@ class GraphDataLoader:
         graph_size_ = data['graph_size']
 
         for ix in tqdm(range(len(tags_)), desc="Converting to PyG Data"):
+            label = labels_[ix]
+            if label_mode == "binary":
+                label = 0 if int(label) == 0 else 1
             sample = {
                 'V': V_[ix], 'A': A_[ix], 'label': labels_[ix],
                 'tag': tags_[ix], 'mask': masks_[ix], 'graph_size': graph_size_[ix],
             }
+            sample['label'] = label
             if 'global_state' in data:
                 sample['global_state'] = data['global_state'][ix]
             if 'subgraph_size' in data:

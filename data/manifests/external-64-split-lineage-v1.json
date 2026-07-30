@@ -1,0 +1,112 @@
+{
+  "class_counts": {
+    "fine_tune:cocrystal:2": 3,
+    "fine_tune:failed:0": 3,
+    "fine_tune:hydrate:3": 3,
+    "fine_tune:salt:1": 5,
+    "holdout:cocrystal:2": 6,
+    "holdout:failed:0": 14,
+    "holdout:hydrate:3": 22,
+    "holdout:salt:1": 8
+  },
+  "external_pairs": 64,
+  "fine_tune_indices": [
+    5,
+    6,
+    7,
+    8,
+    12,
+    21,
+    28,
+    42,
+    45,
+    52,
+    58,
+    59,
+    61,
+    62
+  ],
+  "holdout_indices": [
+    0,
+    1,
+    2,
+    3,
+    4,
+    9,
+    10,
+    11,
+    13,
+    14,
+    15,
+    16,
+    17,
+    18,
+    19,
+    20,
+    22,
+    23,
+    24,
+    25,
+    26,
+    27,
+    29,
+    30,
+    31,
+    32,
+    33,
+    34,
+    35,
+    36,
+    37,
+    38,
+    39,
+    40,
+    41,
+    43,
+    44,
+    46,
+    47,
+    48,
+    49,
+    50,
+    51,
+    53,
+    54,
+    55,
+    56,
+    57,
+    60,
+    63
+  ],
+  "inputs": {
+    "fine_tune": {
+      "path": "data/HKU_data_6_FT_minoxidil_balanced_with_exp.npz",
+      "sha256": "dcdc89bb67f61591ffd7ee42296e5a6b5a0c4e09c5801ba0d72feed4ad54442b"
+    },
+    "holdout_forward": {
+      "path": "data/HKU_data_6_experiment_1.npz",
+      "sha256": "ffb6e2e3ae857f1bb72adde93855e8e4502379834776c29050c637fdcd2c970c"
+    },
+    "reference_forward": {
+      "path": "/tmp/mcc-gcn-experiment-64.npz",
+      "ref": "72cf8c7349aa01a9a053954d3bac025867e29bc0:data/HKU_data_6_experiment_1.npz",
+      "sha256": "1a5d099ab26c64f6f9034b80690859b986b5c40365b87061a3599fdf72eff577"
+    },
+    "reference_reverse": {
+      "path": "/tmp/mcc-gcn-experiment-64-reverse.npz",
+      "ref": "72cf8c7349aa01a9a053954d3bac025867e29bc0:data/HKU_data_6_experiment_2.npz",
+      "sha256": "f1c60514dcfd2a9c66ccb9a4e8e6533f56e31205cf6bf834c15391ddc6d63b53"
+    },
+    "source_csv": {
+      "path": "/tmp/mcc-gcn-experiment-64.csv",
+      "ref": "72cf8c7349aa01a9a053954d3bac025867e29bc0:data/HKU_data_6_experiment_1.csv",
+      "sha256": "c76c06c6da669d11f1c6ea461a717fab91296209052da91a7c4d6522c655a739"
+    }
+  },
+  "output_csv": {
+    "path": "data/manifests/external-64-split-v1.csv",
+    "sha256": "07cdeae0ccf85f2666b7592cfeb9e3f8730583528f36d7cb3d93703214d45ea4"
+  },
+  "schema_version": "mcc-gcn-external-split-lineage-v1",
+  "source_ref": "72cf8c7349aa01a9a053954d3bac025867e29bc0:data/HKU_data_6_experiment_1.csv"
+}

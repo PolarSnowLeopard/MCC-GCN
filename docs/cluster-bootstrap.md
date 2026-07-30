@@ -1,5 +1,10 @@
 # Cluster Bootstrap
 
+For corrected revision experiments, use
+`scripts/bootstrap_corrected_cluster.sh` and
+`docs/corrected-retraining.md`. The workflow below restores the frozen
+legacy-NPZ environment only.
+
 Use this when a fresh training cluster starts without code, data, or local
 project installation. This path does not require CCDC.
 
