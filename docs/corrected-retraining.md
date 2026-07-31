@@ -49,6 +49,9 @@ selection, scheduler decisions, early stopping, or threshold selection.
 - Frozen BatchNorm running statistics remain frozen during fine-tuning.
 - Fine-tuning selection uses an internal grouped validation split, then a fresh
   final fit uses all 34 pairs for the selected epoch count.
+- Checkpoints maximize validation balanced accuracy and use validation loss to
+  break ties, which avoids premature stopping on small discrete validation
+  sets.
 - Evaluation verifies A/B and B/A row count, label, and pair-key alignment.
 - Every training and evaluation directory records configuration, history,
   checkpoint selection, file hashes, and metrics.

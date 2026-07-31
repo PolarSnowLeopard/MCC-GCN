@@ -20,6 +20,7 @@ from mcc_gcn.utils import seed_everything, resolve_npz
 from mcc_gcn.models.gcn import GCNNet, train_epoch, evaluate
 from mcc_gcn.models.imbalance import calculate_class_weights
 from mcc_gcn.models.metrics import calculate_metrics
+from mcc_gcn.models.selection import validation_result_improved
 from mcc_gcn.data.dataset import GraphDataLoader
 from mcc_gcn.data.splitting import grouped_stratified_split
 
@@ -277,6 +278,7 @@ def main():
         print(f'TensorBoard logs: {args.tensorboard_dir}')
 
     best_val_bacc = -1.0
+    best_val_loss = float('inf')
     best_epoch = None
     epochs_without_improvement = 0
     history = []
@@ -334,8 +336,14 @@ def main():
             f"Train BACC: {train_bacc:.4f}, Val BACC: {val_bacc:.4f}"
         )
 
-        if val_bacc > best_val_bacc:
+        if validation_result_improved(
+            val_bacc,
+            val_loss,
+            best_val_bacc,
+            best_val_loss,
+        ):
             best_val_bacc = val_bacc
+            best_val_loss = val_loss
             best_epoch = epoch
             epochs_without_improvement = 0
             torch.save(model.state_dict(), os.path.join(args.save_dir, 'best_model.pth'))
@@ -368,6 +376,7 @@ def main():
     selection = {
         'best_epoch': best_epoch,
         'best_validation_balanced_accuracy': best_val_bacc,
+        'best_validation_loss': best_val_loss,
         'epochs_completed': len(history),
     }
     with open(
@@ -382,6 +391,11 @@ def main():
         summary_writer.add_scalar(
             'selection/best_validation_balanced_accuracy',
             best_val_bacc,
+            best_epoch,
+        )
+        summary_writer.add_scalar(
+            'selection/best_validation_loss',
+            best_val_loss,
             best_epoch,
         )
         summary_writer.flush()
