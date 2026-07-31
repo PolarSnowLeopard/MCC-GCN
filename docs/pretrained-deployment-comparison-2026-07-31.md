@@ -5,8 +5,10 @@
 Replace the invalid production `MCC-GCN Pretrained v1` checkpoint with the
 corrected four-class pretrained checkpoint. The replacement has strong
 pair-disjoint in-domain validation results and removes the old checkpoint's
-total collapse. It remains weak on the external 64, which must be presented as
-an out-of-distribution limitation rather than hidden by deployment.
+near-constant probability output. It remains weak on the external 64 and still
+assigns one class to the customer's chemically similar 12-row batch. These
+out-of-distribution limitations must not be presented as resolved by
+deployment.
 
 The production pretrained v1 checkpoint was not a valid fallback. Its
 BatchNorm state showed only six tracked batches, and it collapsed even on
@@ -204,3 +206,26 @@ Post-deployment public API verification:
   and balanced accuracy 0.5628, exactly preserving the pre-deployment baseline.
 - HTTPS homepage returned 200 and all Compose services remained running with no
   backend or Celery errors during the checks.
+
+## Customer Feedback Reproduction After Deployment
+
+The corrected 12-row customer batch was recovered from historical production
+task ID 67. The legacy pretrained model predicted Solvate for all 12 rows.
+Re-running the exact same inputs against Pretrained v2 produced task ID 342:
+
+- all 12 rows completed without errors
+- all 12 predicted labels were Cocrystal
+- there were 10 distinct probability vectors because two chemical pairs were
+  duplicated
+- Cocrystal confidence ranged from 0.6640 to 0.9750
+
+Therefore the old checkpoint's nearly constant four-class probabilities have
+been fixed, but the customer's visible complaint that this particular batch
+has one predicted label remains true. This is model behavior on a narrow
+external series, not stale API output or reuse of one inference result.
+
+The separate single-pair example from the customer screenshot was also
+recovered from historical task IDs 22 and 34. It changed from legacy Solvate
+probabilities `[0.2538, 0.2262, 0.2547, 0.2652]` to Salt with probability
+0.9855 in post-deployment task ID 343. This confirms that Pretrained v2 does
+not return one globally constant output for unrelated inputs.
