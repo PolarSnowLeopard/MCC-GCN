@@ -17,7 +17,13 @@ from torch_geometric.loader import DataLoader
 
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..'))
 from mcc_gcn.utils import seed_everything, resolve_npz
-from mcc_gcn.models.gcn import GCNNet, train_epoch, evaluate
+from mcc_gcn.models.gcn import (
+    GCNNet,
+    evaluate,
+    evaluate_pair_averaged,
+    resolve_validation_aggregation,
+    train_epoch,
+)
 from mcc_gcn.models.imbalance import calculate_class_weights
 from mcc_gcn.models.metrics import calculate_metrics
 from mcc_gcn.models.selection import validation_result_improved
@@ -198,6 +204,7 @@ def main():
     val_loader = DataLoader(
         val_items, batch_size=args.batch_size, shuffle=False,
     )
+    validation_aggregation = resolve_validation_aggregation(val_items)
 
     print(f"Train: {len(train_items)}, Val: {len(val_items)}")
     train_labels = np.asarray(
@@ -211,6 +218,7 @@ def main():
     print(f"Train distribution: {np.bincount(train_labels)}")
     print(f"Val distribution:   {np.bincount(val_labels)}")
     print(f"Split mode: {split_mode}")
+    print(f"Validation aggregation: {validation_aggregation}")
 
     # --- Model ---
     model = GCNNet(
@@ -243,6 +251,7 @@ def main():
         'resolved_npz': npz_path,
         'resolved_validation_npz': resolved_val_npz,
         'split_mode': split_mode,
+        'validation_aggregation': validation_aggregation,
         'train_rows': len(train_items),
         'validation_rows': len(val_items),
         'class_weights': class_weights.tolist(),
@@ -286,9 +295,14 @@ def main():
         epoch_train_labels, train_preds, train_loss = train_epoch(
             model, train_loader, optimizer, criterion, device,
         )
-        epoch_val_labels, val_preds, val_loss = evaluate(
-            model, val_loader, criterion, device,
-        )
+        if validation_aggregation == 'pair_probability_mean':
+            epoch_val_labels, val_preds, val_loss = evaluate_pair_averaged(
+                model, val_loader, criterion, device,
+            )
+        else:
+            epoch_val_labels, val_preds, val_loss = evaluate(
+                model, val_loader, criterion, device,
+            )
         scheduler.step(val_loss)
 
         _, train_bacc, _ = calculate_metrics(

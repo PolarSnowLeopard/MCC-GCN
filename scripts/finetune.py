@@ -20,7 +20,13 @@ from torch_geometric.loader import DataLoader
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
 from mcc_gcn.data.dataset import GraphDataLoader
 from mcc_gcn.data.splitting import grouped_stratified_split
-from mcc_gcn.models.gcn import GCNNet, evaluate, train_epoch
+from mcc_gcn.models.gcn import (
+    GCNNet,
+    evaluate,
+    evaluate_pair_averaged,
+    resolve_validation_aggregation,
+    train_epoch,
+)
 from mcc_gcn.models.imbalance import calculate_class_weights
 from mcc_gcn.models.metrics import calculate_metrics
 from mcc_gcn.models.selection import validation_result_improved
@@ -303,6 +309,7 @@ def main():
         if validation_items
         else None
     )
+    validation_aggregation = resolve_validation_aggregation(validation_items)
 
     train_labels = np.asarray(
         [item.y.item() for item in train_items],
@@ -367,6 +374,8 @@ def main():
         f"Class weighting: {resolved_weighting} "
         f"{class_weights.tolist()}"
     )
+    if validation_loader is not None:
+        print(f"Validation aggregation: {validation_aggregation}")
 
     criterion = nn.CrossEntropyLoss(
         weight=torch.as_tensor(class_weights, device=device),
@@ -394,6 +403,7 @@ def main():
         "resolved_validation_npz": resolved_val_npz,
         "resolved_holdout_npz": resolved_holdout_npz,
         "split_mode": split_mode,
+        "validation_aggregation": validation_aggregation,
         "train_rows": len(train_items),
         "validation_rows": len(validation_items),
         "class_weights": class_weights.tolist(),
@@ -463,12 +473,28 @@ def main():
         )
 
         if validation_loader is not None:
-            validation_labels, validation_predictions, validation_loss = evaluate(
-                model,
-                validation_loader,
-                criterion,
-                device,
-            )
+            if validation_aggregation == "pair_probability_mean":
+                (
+                    validation_labels,
+                    validation_predictions,
+                    validation_loss,
+                ) = evaluate_pair_averaged(
+                    model,
+                    validation_loader,
+                    criterion,
+                    device,
+                )
+            else:
+                (
+                    validation_labels,
+                    validation_predictions,
+                    validation_loss,
+                ) = evaluate(
+                    model,
+                    validation_loader,
+                    criterion,
+                    device,
+                )
             _, validation_bacc, _ = calculate_metrics(
                 validation_labels,
                 validation_predictions,

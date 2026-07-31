@@ -145,3 +145,105 @@ def evaluate(model, dataloader, criterion, device):
             all_labels.extend(batch.y.cpu().numpy())
 
     return all_labels, all_preds, total_loss / total_samples
+
+
+def resolve_validation_aggregation(items):
+    """Choose row or physical-pair validation without accepting mixed metadata."""
+    pair_key_presence = [
+        bool(getattr(item, "pair_key", None))
+        for item in items
+    ]
+    if not pair_key_presence:
+        return "row"
+    if any(pair_key_presence) and not all(pair_key_presence):
+        raise ValueError(
+            "Validation rows contain inconsistent pair_key metadata"
+        )
+    return (
+        "pair_probability_mean"
+        if all(pair_key_presence)
+        else "row"
+    )
+
+
+def evaluate_pair_averaged(
+    model,
+    dataloader,
+    criterion,
+    device,
+    *,
+    expected_orientations=2,
+):
+    """Evaluate physical pairs after averaging orientation probabilities."""
+    model.eval()
+    grouped = {}
+
+    with torch.no_grad():
+        for batch in dataloader:
+            batch = batch.to(device)
+            probabilities = F.softmax(
+                model(batch.x, batch.edge_index, batch.batch),
+                dim=1,
+            ).cpu()
+            labels = batch.y.cpu()
+            pair_keys = getattr(batch, "pair_key", None)
+            if pair_keys is None:
+                raise ValueError(
+                    "Pair-averaged evaluation requires pair_key metadata"
+                )
+            if isinstance(pair_keys, str):
+                pair_keys = [pair_keys]
+            else:
+                pair_keys = list(pair_keys)
+            if len(pair_keys) != len(labels):
+                raise ValueError(
+                    "pair_key count does not match validation row count"
+                )
+
+            for pair_key, label, probability in zip(
+                pair_keys,
+                labels.tolist(),
+                probabilities,
+            ):
+                group = grouped.setdefault(
+                    pair_key,
+                    {"label": label, "probabilities": []},
+                )
+                if group["label"] != label:
+                    raise ValueError(
+                        f"Physical pair {pair_key} has conflicting labels"
+                    )
+                group["probabilities"].append(probability)
+
+    if not grouped:
+        raise ValueError("Pair-averaged evaluation received no rows")
+
+    averaged_probabilities = []
+    averaged_labels = []
+    for pair_key, group in grouped.items():
+        orientation_count = len(group["probabilities"])
+        if (
+            expected_orientations is not None
+            and orientation_count != expected_orientations
+        ):
+            raise ValueError(
+                f"Physical pair {pair_key} has {orientation_count} "
+                f"orientations; expected {expected_orientations}"
+            )
+        averaged_probabilities.append(
+            torch.stack(group["probabilities"]).mean(dim=0)
+        )
+        averaged_labels.append(group["label"])
+
+    probabilities = torch.stack(averaged_probabilities)
+    labels = torch.as_tensor(averaged_labels, dtype=torch.long)
+    weight = getattr(criterion, "weight", None)
+    if weight is not None:
+        weight = weight.detach().cpu().to(dtype=probabilities.dtype)
+    loss = F.nll_loss(
+        probabilities.clamp_min(torch.finfo(probabilities.dtype).tiny).log(),
+        labels,
+        weight=weight,
+    )
+    predictions = probabilities.argmax(dim=1)
+    return labels.tolist(), predictions.tolist(), float(loss.item())
