@@ -49,6 +49,9 @@ selection, scheduler decisions, early stopping, or threshold selection.
 - Frozen BatchNorm running statistics remain frozen during fine-tuning.
 - Fine-tuning selection uses an internal grouped validation split, then a fresh
   final fit uses all 34 pairs for the selected epoch count.
+- Pretraining and fine-tuning validation average the A/B and B/A softmax
+  probabilities by physical pair before checkpoint selection, matching final
+  inference behavior.
 - Checkpoints maximize validation balanced accuracy and use validation loss to
   break ties, which avoids premature stopping on small discrete validation
   sets.
@@ -259,3 +262,30 @@ Run these only after the primary smoke succeeds:
 Do not select the winning ablation on the external 50-pair result. Selection
 must use pretraining validation and the internal 34-pair grouped validation
 only.
+
+### Pretraining class-imbalance comparison
+
+The no-CCDC pretraining comparison is runnable before the final 34-pair
+fine-tuning set is available. It trains both tasks with all three loss-weighting
+strategies and three seeds, without running fine-tuning:
+
+```bash
+cd /workspace/MCC-GCN
+export RUN_ID="pretrain-imbalance-$(date +%Y%m%d-%H%M%S)"
+export OUTDIR="runs/$RUN_ID"
+export TENSORBOARD_ROOT="/primus_oss/summary/mcc-gcn/$RUN_ID"
+
+EXPERIMENT_PROFILE=provisional-no-ccdc \
+SEEDS='42 43 44' \
+CLASS_WEIGHTINGS='none inverse-frequency effective-number' \
+PRETRAIN_EPOCHS=400 \
+bash scripts/run_pretrain_imbalance_ablation.sh 2>&1 | tee "$OUTDIR.log"
+```
+
+This produces 18 runs: two tasks, three weighting strategies, and three seeds.
+`pretrain_imbalance_runs.csv` records every run, while
+`pretrain_imbalance_summary.csv` reports mean and sample standard deviation.
+The summary includes per-class recall and predicted-class counts so majority-
+class collapse is visible. Choose the weighting strategy using frozen
+pretraining validation balanced accuracy; the 64-pair external result is a
+distribution-shift diagnostic, not a selection metric.
