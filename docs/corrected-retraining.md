@@ -222,18 +222,27 @@ Then run the locked primary configuration:
 tmux new -s mccgcn
 cd /workspace/MCC-GCN
 
+export RUN_ID="corrected-primary-$(date +%Y%m%d-%H%M%S)"
+export OUTDIR="runs/$RUN_ID"
+export TENSORBOARD_ROOT="/primus_oss/summary/mcc-gcn/$RUN_ID"
+
 SEEDS='42 43 44' \
 PRETRAIN_EPOCHS=400 \
 FINETUNE_MAX_EPOCHS=200 \
 CLASS_WEIGHTING=effective-number \
 EFFECTIVE_NUMBER_BETA=0.9999 \
 FINETUNE_LAYERS=1 \
-OUTDIR=runs/corrected-primary \
-bash scripts/run_corrected_experiments.sh 2>&1 | tee runs/corrected-primary.log
+bash scripts/run_corrected_experiments.sh 2>&1 | tee "$OUTDIR.log"
 ```
 
 The runner also performs the reviewer-requested Minoxidil-only fine-tuning
 ablation and evaluates it on all 64 external pairs.
+
+When `TENSORBOARD_ROOT` is set, pretraining and fine-tuning event files are
+written under separate task, seed, and stage directories. The event files
+contain training/validation loss, balanced accuracy, learning rate, and the
+selected best validation balanced accuracy. Final-fit stages have no
+validation series because they intentionally train on all fine-tuning pairs.
 
 ## Locked Ablations
 

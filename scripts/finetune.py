@@ -117,6 +117,10 @@ def parse_args():
             "This can leak A/B augmented copies and is baseline-only."
         ),
     )
+    parser.add_argument(
+        "--tensorboard-dir",
+        help="Optional TensorBoard event directory for epoch metrics.",
+    )
     parser.add_argument("--save-dir", default="checkpoints")
     return parser.parse_args()
 
@@ -406,6 +410,26 @@ def main():
         json.dump(run_config, handle, indent=2, sort_keys=True)
         handle.write("\n")
 
+    summary_writer = None
+    if args.tensorboard_dir:
+        try:
+            from torch.utils.tensorboard import SummaryWriter
+        except ImportError as exc:
+            raise RuntimeError(
+                "TensorBoard logging requires the tensorboard package. "
+                "Install it with: python -m pip install tensorboard"
+            ) from exc
+        summary_writer = SummaryWriter(
+            log_dir=args.tensorboard_dir,
+            flush_secs=10,
+        )
+        summary_writer.add_text(
+            "run/config",
+            json.dumps(run_config, indent=2, sort_keys=True),
+            global_step=0,
+        )
+        print(f"TensorBoard logs: {args.tensorboard_dir}")
+
     history = []
     best_validation_bacc = -1.0
     best_epoch = None
@@ -467,6 +491,29 @@ def main():
             else:
                 epochs_without_improvement += 1
         history.append(row)
+        if summary_writer is not None:
+            summary_writer.add_scalar("loss/train", train_loss, epoch)
+            summary_writer.add_scalar(
+                "balanced_accuracy/train",
+                train_bacc,
+                epoch,
+            )
+            summary_writer.add_scalar(
+                "optimization/learning_rate",
+                optimizer.param_groups[0]["lr"],
+                epoch,
+            )
+            if validation_loader is not None:
+                summary_writer.add_scalar(
+                    "loss/validation",
+                    validation_loss,
+                    epoch,
+                )
+                summary_writer.add_scalar(
+                    "balanced_accuracy/validation",
+                    validation_bacc,
+                    epoch,
+                )
         print(message)
 
         if (
@@ -509,6 +556,15 @@ def main():
             "Use that epoch count in a fresh --mode final-fit run before "
             "evaluating the protected holdout."
         )
+    if summary_writer is not None:
+        if args.mode == "select":
+            summary_writer.add_scalar(
+                "selection/best_validation_balanced_accuracy",
+                best_validation_bacc,
+                best_epoch,
+            )
+        summary_writer.flush()
+        summary_writer.close()
 
 
 if __name__ == "__main__":

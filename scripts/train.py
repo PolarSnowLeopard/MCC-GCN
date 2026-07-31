@@ -81,6 +81,10 @@ def parse_args():
         default=30,
         help='Epochs without validation BACC improvement; 0 disables stopping.',
     )
+    p.add_argument(
+        '--tensorboard-dir',
+        help='Optional TensorBoard event directory for epoch metrics.',
+    )
     p.add_argument('--save-dir', type=str, default='checkpoints')
     return p.parse_args()
 
@@ -252,6 +256,26 @@ def main():
         json.dump(run_config, handle, indent=2, sort_keys=True)
         handle.write('\n')
 
+    summary_writer = None
+    if args.tensorboard_dir:
+        try:
+            from torch.utils.tensorboard import SummaryWriter
+        except ImportError as exc:
+            raise RuntimeError(
+                'TensorBoard logging requires the tensorboard package. '
+                'Install it with: python -m pip install tensorboard'
+            ) from exc
+        summary_writer = SummaryWriter(
+            log_dir=args.tensorboard_dir,
+            flush_secs=10,
+        )
+        summary_writer.add_text(
+            'run/config',
+            json.dumps(run_config, indent=2, sort_keys=True),
+            global_step=0,
+        )
+        print(f'TensorBoard logs: {args.tensorboard_dir}')
+
     best_val_bacc = -1.0
     best_epoch = None
     epochs_without_improvement = 0
@@ -285,6 +309,24 @@ def main():
                 'learning_rate': optimizer.param_groups[0]['lr'],
             }
         )
+        if summary_writer is not None:
+            summary_writer.add_scalar('loss/train', train_loss, epoch)
+            summary_writer.add_scalar('loss/validation', val_loss, epoch)
+            summary_writer.add_scalar(
+                'balanced_accuracy/train',
+                train_bacc,
+                epoch,
+            )
+            summary_writer.add_scalar(
+                'balanced_accuracy/validation',
+                val_bacc,
+                epoch,
+            )
+            summary_writer.add_scalar(
+                'optimization/learning_rate',
+                optimizer.param_groups[0]['lr'],
+                epoch,
+            )
 
         msg = (
             f"Epoch {epoch:03d}: "
@@ -335,6 +377,15 @@ def main():
     ) as handle:
         json.dump(selection, handle, indent=2, sort_keys=True)
         handle.write('\n')
+
+    if summary_writer is not None:
+        summary_writer.add_scalar(
+            'selection/best_validation_balanced_accuracy',
+            best_val_bacc,
+            best_epoch,
+        )
+        summary_writer.flush()
+        summary_writer.close()
 
     print(f"\nBest Val BACC: {best_val_bacc:.4f} at epoch {best_epoch}")
     print(f"Model saved to {args.save_dir}/best_model.pth")

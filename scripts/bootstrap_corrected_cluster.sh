@@ -107,7 +107,7 @@ install_python_deps() {
     -i "$PIP_INDEX_URL" \
     --extra-index-url "$PIP_EXTRA_INDEX_URL" \
     numpy pandas scipy scikit-learn tqdm requests cirpy \
-    'rdkit==2025.9.2' torch-geometric
+    'rdkit==2025.9.2' torch-geometric tensorboard
   python -m pip install -e "$REPO_DIR" --no-deps
   python - <<'PY'
 import torch

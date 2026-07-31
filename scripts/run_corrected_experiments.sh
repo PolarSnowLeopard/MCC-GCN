@@ -42,6 +42,7 @@ WEIGHT_DECAY="${WEIGHT_DECAY:-1e-4}"
 CLASS_WEIGHTING="${CLASS_WEIGHTING:-effective-number}"
 EFFECTIVE_NUMBER_BETA="${EFFECTIVE_NUMBER_BETA:-0.9999}"
 FINETUNE_LAYERS="${FINETUNE_LAYERS:-1}"
+TENSORBOARD_ROOT="${TENSORBOARD_ROOT:-}"
 
 required=(
   pretrain_train.npz
@@ -77,7 +78,35 @@ run_task() {
   local model_size="$2"
   local seed="$3"
   local task_dir="$OUTDIR/$task/seed-$seed"
+  local pretrain_tensorboard_args=()
+  local finetune_selection_tensorboard_args=()
+  local finetune_final_tensorboard_args=()
+  local minoxidil_selection_tensorboard_args=()
+  local minoxidil_final_tensorboard_args=()
   mkdir -p "$task_dir"
+
+  if [[ -n "$TENSORBOARD_ROOT" ]]; then
+    pretrain_tensorboard_args=(
+      --tensorboard-dir
+      "$TENSORBOARD_ROOT/$task/seed-$seed/pretrain"
+    )
+    finetune_selection_tensorboard_args=(
+      --tensorboard-dir
+      "$TENSORBOARD_ROOT/$task/seed-$seed/$finetune_run_name-selection"
+    )
+    finetune_final_tensorboard_args=(
+      --tensorboard-dir
+      "$TENSORBOARD_ROOT/$task/seed-$seed/$finetune_run_name-final"
+    )
+    minoxidil_selection_tensorboard_args=(
+      --tensorboard-dir
+      "$TENSORBOARD_ROOT/$task/seed-$seed/minoxidil-20-selection"
+    )
+    minoxidil_final_tensorboard_args=(
+      --tensorboard-dir
+      "$TENSORBOARD_ROOT/$task/seed-$seed/minoxidil-20-final"
+    )
+  fi
 
   python "$ROOT/scripts/train.py" \
     --task "$task" \
@@ -91,6 +120,7 @@ run_task() {
     --seed "$seed" \
     --class-weighting "$CLASS_WEIGHTING" \
     --effective-number-beta "$EFFECTIVE_NUMBER_BETA" \
+    "${pretrain_tensorboard_args[@]}" \
     --save-dir "$task_dir/pretrain"
 
   python "$ROOT/scripts/evaluate.py" \
@@ -116,6 +146,7 @@ run_task() {
     --train-layers "$FINETUNE_LAYERS" \
     --class-weighting "$CLASS_WEIGHTING" \
     --effective-number-beta "$EFFECTIVE_NUMBER_BETA" \
+    "${finetune_selection_tensorboard_args[@]}" \
     --save-dir "$task_dir/$finetune_run_name-selection"
 
   local ft_epoch
@@ -137,6 +168,7 @@ run_task() {
     --train-layers "$FINETUNE_LAYERS" \
     --class-weighting "$CLASS_WEIGHTING" \
     --effective-number-beta "$EFFECTIVE_NUMBER_BETA" \
+    "${finetune_final_tensorboard_args[@]}" \
     --save-dir "$task_dir/$finetune_run_name-final"
 
   python "$ROOT/scripts/evaluate.py" \
@@ -165,6 +197,7 @@ run_task() {
     --train-layers "$FINETUNE_LAYERS" \
     --class-weighting "$CLASS_WEIGHTING" \
     --effective-number-beta "$EFFECTIVE_NUMBER_BETA" \
+    "${minoxidil_selection_tensorboard_args[@]}" \
     --save-dir "$task_dir/minoxidil-20-selection"
 
   local minoxidil_epoch
@@ -186,6 +219,7 @@ run_task() {
     --train-layers "$FINETUNE_LAYERS" \
     --class-weighting "$CLASS_WEIGHTING" \
     --effective-number-beta "$EFFECTIVE_NUMBER_BETA" \
+    "${minoxidil_final_tensorboard_args[@]}" \
     --save-dir "$task_dir/minoxidil-20-final"
 
   python "$ROOT/scripts/evaluate.py" \
@@ -212,6 +246,7 @@ profile = {
     "feature_root": "$FEATURE_ROOT",
     "finetune_feature": "$finetune_feature",
     "minoxidil_ablation_run": bool(int("$run_minoxidil_ablation")),
+    "tensorboard_root": "$TENSORBOARD_ROOT" or None,
 }
 Path(sys.argv[1]).write_text(
     json.dumps(profile, indent=2, sort_keys=True) + "\n",
