@@ -46,6 +46,9 @@ cd /workspace/MCC-GCN
 python -m pip install -e . --no-deps
 ```
 
+Code downloads preserve the entire existing `data/` and `runs/` directories.
+Dataset changes are transferred separately through versioned data bundles.
+
 If the existing repository does not have the helper yet, download directly:
 
 ```bash

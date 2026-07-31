@@ -90,8 +90,7 @@ download_code() {
   mkdir -p "$REPO_DIR"
   rsync -a --delete \
     --exclude '.git/' \
-    --exclude 'data/HKU_data_5_total_inbalance.npz' \
-    --exclude 'data/HKU_data_5_total_inbalance.npz.zst' \
+    --exclude 'data/' \
     --exclude 'runs/' \
     "$tmp/MCC-GCN/" "$REPO_DIR/"
   rm -rf "$tmp"

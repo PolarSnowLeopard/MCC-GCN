@@ -70,11 +70,10 @@ download_code() {
   oss_cp -f "$CODE_OBJECT" "$tmp/MCC-GCN-latest.tar.gz"
   tar -xzf "$tmp/MCC-GCN-latest.tar.gz" -C "$tmp"
   mkdir -p "$dest/MCC-GCN"
-  # rsync keeps data/checkpoints/runs in place unless overwritten by the code package.
+  # Code sync must never delete or overwrite separately managed datasets.
   rsync -a --delete \
     --exclude '.git/' \
-    --exclude 'data/HKU_data_5_total_inbalance.npz' \
-    --exclude 'data/corrected-v2/' \
+    --exclude 'data/' \
     --exclude 'runs/' \
     "$tmp/MCC-GCN/" "$dest/MCC-GCN/"
   rm -rf "$tmp"
