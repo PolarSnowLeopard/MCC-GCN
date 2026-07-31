@@ -74,6 +74,7 @@ download_code() {
   rsync -a --delete \
     --exclude '.git/' \
     --exclude 'data/HKU_data_5_total_inbalance.npz' \
+    --exclude 'data/corrected-v2/' \
     --exclude 'runs/' \
     "$tmp/MCC-GCN/" "$dest/MCC-GCN/"
   rm -rf "$tmp"
