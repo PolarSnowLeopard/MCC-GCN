@@ -2,18 +2,16 @@
 
 ## Decision
 
-Do not replace the production `MCC-GCN Pretrained v1` checkpoint with either
-provisional corrected checkpoint. The corrected four-class candidate changes
-the dominant predicted class but does not materially improve balanced
-accuracy. The corrected binary candidate is also collapsed and is not
-architecture-compatible with the current four-class production model.
+Replace the invalid production `MCC-GCN Pretrained v1` checkpoint with the
+corrected four-class pretrained checkpoint. The replacement has strong
+pair-disjoint in-domain validation results and removes the old checkpoint's
+total collapse. It remains weak on the external 64, which must be presented as
+an out-of-distribution limitation rather than hidden by deployment.
 
-The production pretrained checkpoint is not a valid fallback. Its BatchNorm
-state shows only six tracked batches, and it collapses even on retained legacy
-CCDC features. It was likely uploaded from an early or incomplete run rather
-than from the 372-epoch notebook checkpoint. Keep the working fine-tuned model
-available, but withdraw or clearly mark the pretrained model as unavailable
-until a validated checkpoint is recovered or retrained.
+The production pretrained v1 checkpoint was not a valid fallback. Its
+BatchNorm state showed only six tracked batches, and it collapsed even on
+retained legacy CCDC features. It was likely uploaded from an early or
+incomplete run rather than from the 372-epoch notebook checkpoint.
 
 ## Feedback Dataset Identity
 
@@ -32,8 +30,8 @@ on both the customer's 12-row batch and the locked frontend 64.
 - Dataset: the locked 64 external physical pairs
 - True class counts: negative 17, salt 13, cocrystal 9, solvate 25
 - Production path: authenticated batch API at `yufanwenshu.cn`
-- Production model: built-in `MCC-GCN Pretrained v1`, model ID 1
-- Production task ID: 338
+- Historical production model: built-in `MCC-GCN Pretrained v1`, model ID 1
+- Historical production task ID: 338
 - Candidate path: corrected packed-graph evaluation with matched A/B and B/A
   predictions averaged
 
@@ -124,6 +122,24 @@ explain the production checkpoint's near-initial BatchNorm state.
 Run:
 `runs/provisional-full-seed42-20260731-020558/four-class/seed-42/pretrain`
 
+Pair-disjoint in-domain validation:
+
+- Overall accuracy: 0.8588
+- Balanced accuracy: 0.7954
+- Per-class recall: negative 0.9320, salt 0.9726, cocrystal 0.7718,
+  hydrate/solvate 0.5052
+
+Confusion matrix:
+
+```text
+[[ 192,    2,   12,   0],
+ [   6, 1988,   30,  20],
+ [  70,  166, 1590, 234],
+ [   4,   32,   60,  98]]
+```
+
+Locked external 64:
+
 - Overall accuracy: 0.234375
 - Balanced accuracy: 0.2515
 - Prediction counts: negative 0, salt 51, cocrystal 7, solvate 6
@@ -137,9 +153,12 @@ Confusion matrix:
  [ 0, 17, 4, 4]]
 ```
 
-The candidate does not repeat one exact class for every row, but it remains
-collapsed, never predicts the negative class, and has lower overall accuracy.
-The balanced-accuracy improvement of 0.0015 is not meaningful.
+The candidate does not repeat one exact class for every row. Its poor external
+result and absence of negative predictions show a substantial distribution
+shift between the corrected CCDC-derived pretraining data and the external
+experimental pairs. This does not invalidate the pretrained checkpoint's
+in-domain role, but it means the external use case still requires fine-tuning
+or additional representative training data.
 
 ## Corrected Binary Pretrained Candidate
 
@@ -152,12 +171,36 @@ four-class model without changing the API contract and frontend labels.
 
 ## Deployment Compatibility
 
-Production currently applies legacy padding by built-in model type:
+Legacy production applied padding by built-in model type:
 
 - pretrained: 178 nodes
 - fine-tuned: 70 nodes
 
-Corrected packed-graph checkpoints were trained without padded nodes. A future
-deployment must store an explicit inference profile per model; simply replacing
-the production checkpoint file would incorrectly apply 178-node legacy
-padding to the corrected model.
+Corrected packed-graph checkpoints were trained without padded nodes. The
+application now stores an explicit inference profile per model instead of
+inferring padding from model type:
+
+- `MCC-GCN Pretrained v2`, model ID 1: large model, no padding, RDKit SMILES
+  2D coordinates, covalent edges
+- `MCC-GCN v1`, model ID 2: large model, legacy 70-node padding
+
+## Production Deployment
+
+Deployed on 2026-07-31 from `MCC-GCN-App` commit `051f1f6`.
+
+- Checkpoint SHA256:
+  `197c7a2533b0e01c38a93c3f3137c87f4d6b2f2c4ead2e0edcf356fa050acc26`
+- Built-in model ID 1 was preserved and renamed to
+  `MCC-GCN Pretrained v2`.
+- The backend and Celery workers were restarted to clear cached model state.
+- GitHub CI and CD completed successfully.
+
+Post-deployment public API verification:
+
+- Pretrained v2, locked external 64, task ID 340: 64/64 predicted classes
+  matched the cluster evaluation; no row failed; accuracy 0.234375 and balanced
+  accuracy 0.2515.
+- Fine-tuned v1, locked holdout 50, task ID 341: no row failed; accuracy 0.5800
+  and balanced accuracy 0.5628, exactly preserving the pre-deployment baseline.
+- HTTPS homepage returned 200 and all Compose services remained running with no
+  backend or Celery errors during the checks.
