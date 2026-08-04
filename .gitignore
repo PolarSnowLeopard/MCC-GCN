@@ -14,6 +14,7 @@ data/HKU_data.pkl.gz
 data/FT_data.pkl.gz
 data/FT_data_extra.pkl.gz
 data/corrected-v2/
+data/revision-three-api/
 
 # Intermediate CSV files (not needed with pre-computed npz)
 data/*.csv
