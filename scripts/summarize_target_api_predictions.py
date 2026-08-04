@@ -203,7 +203,12 @@ def main():
     args = parse_args()
     class_names = CLASS_NAMES[args.task]
     target = pd.read_csv(args.target_table, keep_default_na=False)
-    required = {"pair_key", "label_int", "target_apis"}
+    required = {
+        "pair_key",
+        "representative_pair_key",
+        "label_int",
+        "target_apis",
+    }
     missing = required.difference(target.columns)
     if missing:
         raise ValueError(
@@ -211,10 +216,14 @@ def main():
         )
     if target["pair_key"].nunique() != len(target):
         raise ValueError("Target table contains duplicate physical pairs")
+    if target["representative_pair_key"].nunique() != len(target):
+        raise ValueError(
+            "Target table contains duplicate model-input physical pairs"
+        )
 
     predictions = _load_predictions(args.prediction)
     prediction_keys = set(predictions["pair_key"])
-    target_keys = set(target["pair_key"])
+    target_keys = set(target["representative_pair_key"])
     unexpected = prediction_keys.difference(target_keys)
     missing_keys = target_keys.difference(prediction_keys)
     if unexpected:
@@ -224,6 +233,7 @@ def main():
 
     metadata_columns = [
         "pair_key",
+        "representative_pair_key",
         "reactant_A",
         "reactant_B",
         "label_str",
@@ -232,8 +242,14 @@ def main():
         "target_apis",
         "source_kind",
     ]
+    metadata = target[metadata_columns].rename(
+        columns={
+            "pair_key": "connectivity_pair_key",
+            "representative_pair_key": "pair_key",
+        }
+    )
     combined = predictions.merge(
-        target[metadata_columns],
+        metadata,
         on="pair_key",
         how="left",
         validate="one_to_one",

@@ -25,6 +25,7 @@ FINETUNE_LAYERS="${FINETUNE_LAYERS:-0}"
 PRETRAIN_PATIENCE="${PRETRAIN_PATIENCE:-30}"
 FINETUNE_PATIENCE="${FINETUNE_PATIENCE:-20}"
 BOOTSTRAP_REPLICATES="${BOOTSTRAP_REPLICATES:-2000}"
+RESUME="${RESUME:-0}"
 
 required=(
   "$DATA_ROOT/experiment_manifest.json"
@@ -73,29 +74,37 @@ run_task() {
     )
   fi
 
-  python "$ROOT/scripts/train.py" \
-    --task "$task" \
-    --model-size "$model_size" \
-    --data "$FEATURE_ROOT/pretrain_train.npz" \
-    --val-data "$FEATURE_ROOT/pretrain_validation.npz" \
-    --epochs "$PRETRAIN_EPOCHS" \
-    --batch-size "$PRETRAIN_BATCH_SIZE" \
-    --lr "$PRETRAIN_LR" \
-    --weight-decay "$WEIGHT_DECAY" \
-    --seed "$seed" \
-    --class-weighting "$CLASS_WEIGHTING" \
-    --effective-number-beta "$EFFECTIVE_NUMBER_BETA" \
-    --early-stopping-patience "$PRETRAIN_PATIENCE" \
-    "${pretrain_tensorboard[@]}" \
-    --save-dir "$pretrain_dir"
+  if [[ "$RESUME" == "1" && -s "$pretrain_dir/best_model.pth" ]]; then
+    echo "[resume] pretraining checkpoint: $pretrain_dir/best_model.pth"
+  else
+    python "$ROOT/scripts/train.py" \
+      --task "$task" \
+      --model-size "$model_size" \
+      --data "$FEATURE_ROOT/pretrain_train.npz" \
+      --val-data "$FEATURE_ROOT/pretrain_validation.npz" \
+      --epochs "$PRETRAIN_EPOCHS" \
+      --batch-size "$PRETRAIN_BATCH_SIZE" \
+      --lr "$PRETRAIN_LR" \
+      --weight-decay "$WEIGHT_DECAY" \
+      --seed "$seed" \
+      --class-weighting "$CLASS_WEIGHTING" \
+      --effective-number-beta "$EFFECTIVE_NUMBER_BETA" \
+      --early-stopping-patience "$PRETRAIN_PATIENCE" \
+      "${pretrain_tensorboard[@]}" \
+      --save-dir "$pretrain_dir"
+  fi
 
-  python "$ROOT/scripts/evaluate.py" \
-    --task "$task" \
-    --model-size "$model_size" \
-    --model "$pretrain_dir/best_model.pth" \
-    --test-data-1 "$FEATURE_ROOT/target_all_ab.npz" \
-    --test-data-2 "$FEATURE_ROOT/target_all_ba.npz" \
-    --output "$pretrain_dir/target_zero_shot_predictions.csv"
+  if [[ "$RESUME" == "1" && -s "$pretrain_dir/target_zero_shot_predictions.csv" ]]; then
+    echo "[resume] zero-shot predictions"
+  else
+    python "$ROOT/scripts/evaluate.py" \
+      --task "$task" \
+      --model-size "$model_size" \
+      --model "$pretrain_dir/best_model.pth" \
+      --test-data-1 "$FEATURE_ROOT/target_all_ab.npz" \
+      --test-data-2 "$FEATURE_ROOT/target_all_ba.npz" \
+      --output "$pretrain_dir/target_zero_shot_predictions.csv"
+  fi
 
   python "$ROOT/scripts/summarize_target_api_predictions.py" \
     --task "$task" \
@@ -125,55 +134,67 @@ run_task() {
       )
     fi
 
-    python "$ROOT/scripts/finetune.py" \
-      --task "$task" \
-      --model-size "$model_size" \
-      --mode select \
-      --data "$FEATURE_ROOT/fold-$fold/train.npz" \
-      --holdout-data "$FEATURE_ROOT/fold-$fold/test_ab.npz" \
-      --holdout-data "$FEATURE_ROOT/fold-$fold/test_ba.npz" \
-      --pretrained "$pretrain_dir/best_model.pth" \
-      --epochs "$FINETUNE_MAX_EPOCHS" \
-      --batch-size "$FINETUNE_BATCH_SIZE" \
-      --lr "$FINETUNE_LR" \
-      --weight-decay "$WEIGHT_DECAY" \
-      --seed "$fold_seed" \
-      --train-layers "$FINETUNE_LAYERS" \
-      --class-weighting "$CLASS_WEIGHTING" \
-      --effective-number-beta "$EFFECTIVE_NUMBER_BETA" \
-      --early-stopping-patience "$FINETUNE_PATIENCE" \
-      "${selection_tensorboard[@]}" \
-      --save-dir "$selection_dir"
+    if [[ "$RESUME" == "1" && -s "$selection_dir/selection_result.json" ]]; then
+      echo "[resume] fold-$fold selection"
+    else
+      python "$ROOT/scripts/finetune.py" \
+        --task "$task" \
+        --model-size "$model_size" \
+        --mode select \
+        --data "$FEATURE_ROOT/fold-$fold/train.npz" \
+        --holdout-data "$FEATURE_ROOT/fold-$fold/test_ab.npz" \
+        --holdout-data "$FEATURE_ROOT/fold-$fold/test_ba.npz" \
+        --pretrained "$pretrain_dir/best_model.pth" \
+        --epochs "$FINETUNE_MAX_EPOCHS" \
+        --batch-size "$FINETUNE_BATCH_SIZE" \
+        --lr "$FINETUNE_LR" \
+        --weight-decay "$WEIGHT_DECAY" \
+        --seed "$fold_seed" \
+        --train-layers "$FINETUNE_LAYERS" \
+        --class-weighting "$CLASS_WEIGHTING" \
+        --effective-number-beta "$EFFECTIVE_NUMBER_BETA" \
+        --early-stopping-patience "$FINETUNE_PATIENCE" \
+        "${selection_tensorboard[@]}" \
+        --save-dir "$selection_dir"
+    fi
 
     local selected_epoch
     selected_epoch="$(best_epoch "$selection_dir/selection_result.json")"
-    python "$ROOT/scripts/finetune.py" \
-      --task "$task" \
-      --model-size "$model_size" \
-      --mode final-fit \
-      --data "$FEATURE_ROOT/fold-$fold/train.npz" \
-      --holdout-data "$FEATURE_ROOT/fold-$fold/test_ab.npz" \
-      --holdout-data "$FEATURE_ROOT/fold-$fold/test_ba.npz" \
-      --pretrained "$pretrain_dir/best_model.pth" \
-      --epochs "$selected_epoch" \
-      --batch-size "$FINETUNE_BATCH_SIZE" \
-      --lr "$FINETUNE_LR" \
-      --weight-decay "$WEIGHT_DECAY" \
-      --seed "$fold_seed" \
-      --train-layers "$FINETUNE_LAYERS" \
-      --class-weighting "$CLASS_WEIGHTING" \
-      --effective-number-beta "$EFFECTIVE_NUMBER_BETA" \
-      "${final_tensorboard[@]}" \
-      --save-dir "$final_dir"
+    if [[ "$RESUME" == "1" && -s "$final_dir/final_FT_model.pth" ]]; then
+      echo "[resume] fold-$fold final fit"
+    else
+      python "$ROOT/scripts/finetune.py" \
+        --task "$task" \
+        --model-size "$model_size" \
+        --mode final-fit \
+        --data "$FEATURE_ROOT/fold-$fold/train.npz" \
+        --holdout-data "$FEATURE_ROOT/fold-$fold/test_ab.npz" \
+        --holdout-data "$FEATURE_ROOT/fold-$fold/test_ba.npz" \
+        --pretrained "$pretrain_dir/best_model.pth" \
+        --epochs "$selected_epoch" \
+        --batch-size "$FINETUNE_BATCH_SIZE" \
+        --lr "$FINETUNE_LR" \
+        --weight-decay "$WEIGHT_DECAY" \
+        --seed "$fold_seed" \
+        --train-layers "$FINETUNE_LAYERS" \
+        --class-weighting "$CLASS_WEIGHTING" \
+        --effective-number-beta "$EFFECTIVE_NUMBER_BETA" \
+        "${final_tensorboard[@]}" \
+        --save-dir "$final_dir"
+    fi
 
-    python "$ROOT/scripts/evaluate.py" \
-      --task "$task" \
-      --model-size "$model_size" \
-      --model "$final_dir/final_FT_model.pth" \
-      --test-data-1 "$FEATURE_ROOT/fold-$fold/test_ab.npz" \
-      --test-data-2 "$FEATURE_ROOT/fold-$fold/test_ba.npz" \
-      --seed "$fold_seed" \
-      --output "$final_dir/target_test_predictions.csv"
+    if [[ "$RESUME" == "1" && -s "$final_dir/target_test_predictions.csv" ]]; then
+      echo "[resume] fold-$fold predictions"
+    else
+      python "$ROOT/scripts/evaluate.py" \
+        --task "$task" \
+        --model-size "$model_size" \
+        --model "$final_dir/final_FT_model.pth" \
+        --test-data-1 "$FEATURE_ROOT/fold-$fold/test_ab.npz" \
+        --test-data-2 "$FEATURE_ROOT/fold-$fold/test_ba.npz" \
+        --seed "$fold_seed" \
+        --output "$final_dir/target_test_predictions.csv"
+    fi
     prediction_args+=(--prediction "$final_dir/target_test_predictions.csv")
   done
 
@@ -204,6 +225,7 @@ config = {
     "class_weighting": "$CLASS_WEIGHTING",
     "effective_number_beta": float("$EFFECTIVE_NUMBER_BETA"),
     "finetune_layers": int("$FINETUNE_LAYERS"),
+    "resume": "$RESUME" == "1",
     "tensorboard_root": "$TENSORBOARD_ROOT" or None,
 }
 Path(sys.argv[1]).write_text(
