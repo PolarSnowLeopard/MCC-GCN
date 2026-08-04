@@ -79,9 +79,9 @@ restore_code_from_oss() {
   tar -xzf "$temp/MCC-GCN-latest.tar.gz" -C "$temp"
   mkdir -p "$REPO_DIR"
   rsync -a --delete \
-    --exclude '.git/' \
-    --exclude 'data/' \
-    --exclude 'runs/' \
+    --exclude '/.git/' \
+    --exclude '/data/' \
+    --exclude '/runs/' \
     "$temp/MCC-GCN/" "$REPO_DIR/"
   rm -rf "$temp"
 }

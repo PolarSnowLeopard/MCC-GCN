@@ -72,9 +72,9 @@ download_code() {
   mkdir -p "$dest/MCC-GCN"
   # Code sync must never delete or overwrite separately managed datasets.
   rsync -a --delete \
-    --exclude '.git/' \
-    --exclude 'data/' \
-    --exclude 'runs/' \
+    --exclude '/.git/' \
+    --exclude '/data/' \
+    --exclude '/runs/' \
     "$tmp/MCC-GCN/" "$dest/MCC-GCN/"
   rm -rf "$tmp"
   echo "[download-code] done: $dest/MCC-GCN"
