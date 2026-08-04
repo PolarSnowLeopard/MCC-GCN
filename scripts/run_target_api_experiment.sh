@@ -74,7 +74,9 @@ run_task() {
     )
   fi
 
-  if [[ "$RESUME" == "1" && -s "$pretrain_dir/best_model.pth" ]]; then
+  if [[ "$RESUME" == "1" \
+      && -s "$pretrain_dir/best_model.pth" \
+      && -s "$pretrain_dir/selection_result.json" ]]; then
     echo "[resume] pretraining checkpoint: $pretrain_dir/best_model.pth"
   else
     python "$ROOT/scripts/train.py" \
