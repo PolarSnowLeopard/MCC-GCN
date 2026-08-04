@@ -19,6 +19,10 @@ SKIP_CODE_UPDATE="${SKIP_CODE_UPDATE:-0}"
 PIP_INDEX_URL="${PIP_INDEX_URL:-https://mirrors.aliyun.com/pypi/simple}"
 PIP_EXTRA_INDEX_URL="${PIP_EXTRA_INDEX_URL:-https://pypi.ngc.nvidia.com}"
 
+# Some cluster images ship an unrelated top-level ``scripts`` package or an
+# older MCC-GCN wheel. Always resolve imports from this restored checkout.
+export PYTHONPATH="$REPO_DIR${PYTHONPATH:+:$PYTHONPATH}"
+
 log() {
   printf '\n[%s] %s\n' "$(date '+%F %T')" "$*"
 }
@@ -100,21 +104,24 @@ restore_code() {
       exit 1
     }
     log "Skipping code update"
-    return
+  else
+    log "Restoring code from $CODE_SOURCE"
+    case "$CODE_SOURCE" in
+      oss)
+        restore_code_from_oss
+        ;;
+      github)
+        restore_code_from_github
+        ;;
+      *)
+        echo "error: CODE_SOURCE must be oss or github" >&2
+        exit 1
+        ;;
+    esac
   fi
-  log "Restoring code from $CODE_SOURCE"
-  case "$CODE_SOURCE" in
-    oss)
-      restore_code_from_oss
-      ;;
-    github)
-      restore_code_from_github
-      ;;
-    *)
-      echo "error: CODE_SOURCE must be oss or github" >&2
-      exit 1
-      ;;
-  esac
+  test -s "$REPO_DIR/mcc_gcn/data/target_api.py"
+  test -s "$REPO_DIR/scripts/summarize_pretrain_imbalance.py"
+  test -s "$REPO_DIR/scripts/summarize_target_api_predictions.py"
 }
 
 install_python_deps() {
@@ -128,10 +135,16 @@ install_python_deps() {
   python - <<'PY'
 import torch
 import torch_geometric
+import mcc_gcn
+import mcc_gcn.data.target_api
+import scripts.summarize_pretrain_imbalance
 from rdkit import Chem
 
 print("torch:", torch.__version__)
 print("torch_geometric:", torch_geometric.__version__)
+print("mcc_gcn:", mcc_gcn.__file__)
+print("target_api:", mcc_gcn.data.target_api.__file__)
+print("scripts:", scripts.summarize_pretrain_imbalance.__file__)
 print("cuda:", torch.cuda.is_available())
 print("gpu:", torch.cuda.get_device_name(0) if torch.cuda.is_available() else None)
 print("rdkit:", Chem.MolFromSmiles("CCO") is not None)
