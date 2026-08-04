@@ -103,14 +103,17 @@ def _bootstrap_intervals(
     labels: np.ndarray,
     predictions: np.ndarray,
     *,
+    class_labels: list[int],
     replicates: int,
     seed: int,
 ) -> dict:
     if replicates < 1:
         return {}
     rng = np.random.default_rng(seed)
-    classes = sorted(set(labels.tolist()))
-    indices_by_class = [np.flatnonzero(labels == label) for label in classes]
+    present_classes = sorted(set(labels.tolist()))
+    indices_by_class = [
+        np.flatnonzero(labels == label) for label in present_classes
+    ]
     accuracy_values = []
     balanced_values = []
     for _ in range(replicates):
@@ -125,7 +128,7 @@ def _bootstrap_intervals(
             _balanced_accuracy(
                 labels[sample],
                 predictions[sample],
-                classes,
+                class_labels,
             )
         )
     return {
@@ -193,6 +196,7 @@ def _metrics(
         "bootstrap": _bootstrap_intervals(
             labels,
             predictions,
+            class_labels=class_labels,
             replicates=bootstrap_replicates,
             seed=seed,
         ),
