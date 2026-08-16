@@ -89,6 +89,7 @@ class TargetAPIFoldTest(unittest.TestCase):
                         "label_str": f"class-{label}",
                         "label_int": label,
                         "target_apis": "Example API",
+                        "reactant_B": "C" * (index + 1),
                     }
                 )
         table = pd.DataFrame(rows)
@@ -99,6 +100,10 @@ class TargetAPIFoldTest(unittest.TestCase):
         self.assertEqual(set(folds["test_fold"]), set(range(5)))
         counts = folds.groupby(["test_fold", "label_int"]).size()
         self.assertTrue(counts.eq(2).all())
+        coformer_fold_counts = folds.groupby(
+            "coformer_connectivity_key"
+        )["test_fold"].nunique()
+        self.assertTrue(coformer_fold_counts.eq(1).all())
 
 
 if __name__ == "__main__":

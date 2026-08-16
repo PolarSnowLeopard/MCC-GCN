@@ -41,6 +41,33 @@ for path in "${required[@]}"; do
     exit 1
   }
 done
+python - "$DATA_ROOT/experiment_manifest.json" "$DATA_ROOT/folds/fold_assignments.csv" <<'PY'
+import json
+import sys
+
+import pandas as pd
+
+manifest = json.load(open(sys.argv[1], encoding="utf-8"))
+outer = manifest.get("outer_cross_validation", {})
+if manifest.get("schema_version") != "mcc-gcn-three-api-experiment-v2":
+    raise SystemExit("error: the coformer-grouped v2 experiment data is required")
+if outer.get("strategy") != "stratified_group_k_fold":
+    raise SystemExit("error: unexpected outer-fold strategy")
+if outer.get("group_by") != "coformer_connectivity_key":
+    raise SystemExit("error: outer folds are not grouped by coformer")
+
+folds = pd.read_csv(sys.argv[2], keep_default_na=False)
+required = {"pair_key", "coformer_connectivity_key", "test_fold"}
+missing = required.difference(folds.columns)
+if missing:
+    raise SystemExit(f"error: fold assignments are missing {sorted(missing)}")
+if folds.groupby("coformer_connectivity_key")["test_fold"].nunique().max() != 1:
+    raise SystemExit("error: a coformer group spans multiple outer folds")
+print(
+    "Verified coformer-grouped outer folds: "
+    f"{len(folds)} pairs, {folds['coformer_connectivity_key'].nunique()} groups"
+)
+PY
 for fold in $(seq 0 $((FOLDS - 1))); do
   test -s "$FEATURE_ROOT/fold-$fold/train.npz"
   test -s "$FEATURE_ROOT/fold-$fold/test_ab.npz"
@@ -216,7 +243,7 @@ import sys
 from pathlib import Path
 
 config = {
-    "schema_version": "mcc-gcn-three-api-run-v1",
+    "schema_version": "mcc-gcn-three-api-run-v2",
     "data_root": "$DATA_ROOT",
     "feature_root": "$FEATURE_ROOT",
     "tasks": "$TASKS".split(),

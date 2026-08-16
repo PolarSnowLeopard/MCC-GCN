@@ -204,6 +204,12 @@ def main():
         fold_counts[str(fold)] = {
             "train_pairs": len(train),
             "test_pairs": len(test),
+            "test_coformer_groups": int(
+                fold_assignments.loc[
+                    fold_assignments["test_fold"].eq(fold),
+                    "coformer_connectivity_key",
+                ].nunique()
+            ),
             "test_labels": _label_counts(test),
             "test_target_apis": _target_api_counts(test),
         }
@@ -213,7 +219,7 @@ def main():
         for path, digest in hashes.items()
     }
     manifest = {
-        "schema_version": "mcc-gcn-three-api-experiment-v1",
+        "schema_version": "mcc-gcn-three-api-experiment-v2",
         "software": {
             "pandas": pd.__version__,
             "rdkit": rdBase.rdkitVersion,
@@ -257,6 +263,16 @@ def main():
         "outer_cross_validation": {
             "folds": args.folds,
             "seed": args.seed,
+            "strategy": "stratified_group_k_fold",
+            "group_by": "coformer_connectivity_key",
+            "coformer_groups": int(
+                fold_assignments["coformer_connectivity_key"].nunique()
+            ),
+            "coformer_groups_spanning_folds": int(
+                fold_assignments.groupby("coformer_connectivity_key")[
+                    "test_fold"
+                ].nunique().gt(1).sum()
+            ),
             "fold_counts": fold_counts,
         },
         "outputs": relative_hashes,

@@ -8,7 +8,7 @@ from dataclasses import dataclass
 import numpy as np
 import pandas as pd
 from rdkit import Chem, rdBase
-from sklearn.model_selection import StratifiedKFold
+from sklearn.model_selection import StratifiedGroupKFold
 
 from .quality import canonical_pair_key
 
@@ -341,36 +341,59 @@ def stratified_target_folds(
     n_splits: int = 5,
     seed: int = 42,
 ) -> pd.DataFrame:
-    """Assign each physical pair to exactly one stratified outer test fold."""
-    required = {"pair_key", "label_int", "target_apis"}
+    """Assign coformer-disjoint physical pairs to stratified outer folds."""
+    required = {"pair_key", "label_int", "target_apis", "reactant_B"}
     missing = required.difference(table.columns)
     if missing:
         raise ValueError(f"Target table is missing columns: {sorted(missing)}")
     if table["pair_key"].nunique() != len(table):
         raise ValueError("Target table must contain one row per physical pair")
-    class_counts = table["label_int"].value_counts()
-    if class_counts.min() < n_splits:
+    ordered = table.sort_values("pair_key").reset_index(drop=True)
+    coformer_keys = np.array(
+        [molecule_identity(smiles)[1] for smiles in ordered["reactant_B"]]
+    )
+    class_group_counts = (
+        pd.DataFrame(
+            {
+                "label_int": ordered["label_int"],
+                "coformer_connectivity_key": coformer_keys,
+            }
+        )
+        .drop_duplicates()
+        .groupby("label_int")["coformer_connectivity_key"]
+        .nunique()
+    )
+    if class_group_counts.min() < n_splits:
         raise ValueError(
-            "Every class needs at least n_splits physical pairs"
+            "Every class needs at least n_splits coformer groups"
         )
 
-    ordered = table.sort_values("pair_key").reset_index(drop=True)
-    splitter = StratifiedKFold(
+    splitter = StratifiedGroupKFold(
         n_splits=n_splits,
         shuffle=True,
         random_state=seed,
     )
     test_fold = np.full(len(ordered), -1, dtype=np.int64)
     for fold, (_, test_indices) in enumerate(
-        splitter.split(ordered, ordered["label_int"])
+        splitter.split(
+            ordered,
+            ordered["label_int"],
+            groups=coformer_keys,
+        )
     ):
         test_fold[test_indices] = fold
     if np.any(test_fold < 0):
         raise AssertionError("At least one target pair has no test fold")
     result = ordered[["pair_key", "label_str", "label_int", "target_apis"]].copy()
+    result["coformer_connectivity_key"] = coformer_keys
     result["test_fold"] = test_fold
     result["n_splits"] = n_splits
     result["seed"] = seed
+    coformer_fold_counts = result.groupby("coformer_connectivity_key")[
+        "test_fold"
+    ].nunique()
+    if coformer_fold_counts.max() != 1:
+        raise AssertionError("A coformer group spans multiple test folds")
     return result.sort_values(["test_fold", "label_int", "pair_key"]).reset_index(
         drop=True
     )

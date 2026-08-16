@@ -11,7 +11,7 @@ GIT_REF="${GIT_REF:-fix/data-pipeline-v2}"
 OSS_PREFIX="${OSS_PREFIX:-oss://chat-algorithm-data/fg/zfy/mcc-gcn}"
 OSS_ENDPOINT="${OSS_ENDPOINT:-https://oss-cn-hangzhou.aliyuncs.com}"
 CODE_OBJECT="${CODE_OBJECT:-$OSS_PREFIX/code/MCC-GCN-latest.tar.gz}"
-DATA_OBJECT="${DATA_OBJECT:-$OSS_PREFIX/data/mcc-gcn-revision-three-api-v1-tables.tar.zst}"
+DATA_OBJECT="${DATA_OBJECT:-$OSS_PREFIX/data/mcc-gcn-revision-three-api-v2-tables.tar.zst}"
 DATA_SHA256_OBJECT="${DATA_SHA256_OBJECT:-$DATA_OBJECT.sha256}"
 BUILD_FEATURES="${BUILD_FEATURES:-1}"
 RUN_TESTS="${RUN_TESTS:-1}"
@@ -166,7 +166,19 @@ restore_data() {
   )
   zstd -t "$archive"
   zstd -d -c "$archive" | tar -xf - -C "$REPO_DIR"
-  test -s "$REPO_DIR/data/revision-three-api/experiment_manifest.json"
+  local manifest="$REPO_DIR/data/revision-three-api/experiment_manifest.json"
+  test -s "$manifest"
+  python - "$manifest" <<'PY'
+import json
+import sys
+
+manifest = json.load(open(sys.argv[1], encoding="utf-8"))
+outer = manifest.get("outer_cross_validation", {})
+if manifest.get("schema_version") != "mcc-gcn-three-api-experiment-v2":
+    raise SystemExit("error: restored experiment data is not v2")
+if outer.get("group_by") != "coformer_connectivity_key":
+    raise SystemExit("error: restored outer folds are not grouped by coformer")
+PY
   rm -rf "$temp"
 }
 
@@ -184,7 +196,7 @@ main() {
   if [[ "$BUILD_FEATURES" == "1" ]]; then
     (
       cd "$REPO_DIR"
-      bash scripts/prepare_target_api_features.sh
+      FORCE=1 bash scripts/prepare_target_api_features.sh
     )
   fi
   log "Three-API cluster restore complete: $REPO_DIR"

@@ -39,8 +39,9 @@ current evidence. Binary performance is evaluated on the pooled benchmark.
 5. Train the historical small binary MCC-GCN and historical large four-class
    MCC-GCN separately.
 6. Evaluate each pretrained model zero-shot on all 170 target pairs.
-7. Run five-fold stratified target-domain fine-tuning. Each outer test fold has
-   34 physical pairs and every pair is tested exactly once.
+7. Run five-fold coformer-grouped, label-stratified target-domain fine-tuning.
+   Every physical pair is tested exactly once, and the same coformer cannot
+   occur in both the training and test partitions of an outer fold.
 8. Select the fine-tuning epoch only on an inner pair-grouped validation split,
    then retrain on the complete outer training fold for that epoch count.
 9. Average A/B and B/A probabilities before every reported prediction.
@@ -48,7 +49,8 @@ current evidence. Binary performance is evaluated on the pooled benchmark.
     matrices, and stratified bootstrap confidence intervals.
 
 The outer folds are fixed with seed 42. No target test fold is used for epoch,
-class-weight, threshold, or model selection.
+class-weight, threshold, or model selection. The 170 pairs form 148 coformer
+connectivity groups; no group spans multiple outer test folds.
 
 ## Build the frozen data locally
 
@@ -65,10 +67,10 @@ bash scripts/package_target_api_data.sh
 ```
 
 The frozen data archive is
-`dist/mcc-gcn-revision-three-api-v1-tables.tar.zst`. Its current SHA256 is:
+`dist/mcc-gcn-revision-three-api-v2-tables.tar.zst`. Its current SHA256 is:
 
 ```text
-04d4f185cae87893b2c7c1ff3a1f795a8901a9d55ea341c537911fb2cdb27df8
+efc5e9fe2f131b20ca22f6b59ca142df5cb9c76d3d1e5cc3809aac7810268b73
 ```
 
 Upload the code archive and data bundle after committing the implementation:
@@ -76,9 +78,9 @@ Upload the code archive and data bundle after committing the implementation:
 ```bash
 bash scripts/oss_sync.sh upload-code
 bash scripts/oss_sync.sh upload-data \
-  dist/mcc-gcn-revision-three-api-v1-tables.tar.zst \
-  dist/mcc-gcn-revision-three-api-v1-tables.tar.zst.sha256 \
-  dist/mcc-gcn-revision-three-api-v1-tables.tar.zst.manifest.json
+  dist/mcc-gcn-revision-three-api-v2-tables.tar.zst \
+  dist/mcc-gcn-revision-three-api-v2-tables.tar.zst.sha256 \
+  dist/mcc-gcn-revision-three-api-v2-tables.tar.zst.manifest.json
 ```
 
 ## Restore a fresh cluster

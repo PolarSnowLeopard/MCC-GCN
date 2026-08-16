@@ -5,7 +5,7 @@ set -euo pipefail
 
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 SOURCE_ROOT="${SOURCE_ROOT:-$ROOT/runs/revision-three-api/data}"
-OUTPUT="${OUTPUT:-$ROOT/dist/mcc-gcn-revision-three-api-v1-tables.tar.zst}"
+OUTPUT="${OUTPUT:-$ROOT/dist/mcc-gcn-revision-three-api-v2-tables.tar.zst}"
 
 required=(
   "$SOURCE_ROOT/experiment_manifest.json"
@@ -20,6 +20,19 @@ for path in "${required[@]}"; do
     exit 1
   }
 done
+python3 - "$SOURCE_ROOT/experiment_manifest.json" <<'PY'
+import json
+import sys
+
+manifest = json.load(open(sys.argv[1], encoding="utf-8"))
+outer = manifest.get("outer_cross_validation", {})
+if manifest.get("schema_version") != "mcc-gcn-three-api-experiment-v2":
+    raise SystemExit("error: coformer-grouped v2 experiment data is required")
+if outer.get("group_by") != "coformer_connectivity_key":
+    raise SystemExit("error: outer folds are not grouped by coformer")
+if outer.get("coformer_groups_spanning_folds") != 0:
+    raise SystemExit("error: a coformer group spans multiple outer folds")
+PY
 command -v zstd >/dev/null || {
   echo "error: zstd is required" >&2
   exit 1
@@ -48,7 +61,7 @@ from pathlib import Path
 
 archive = Path(sys.argv[1])
 metadata = {
-    "schema_version": "mcc-gcn-three-api-data-bundle-v1",
+    "schema_version": "mcc-gcn-three-api-data-bundle-v2",
     "archive": archive.name,
     "sha256": sys.argv[2],
     "bytes": archive.stat().st_size,
