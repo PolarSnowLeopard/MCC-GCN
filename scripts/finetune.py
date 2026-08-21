@@ -19,6 +19,10 @@ from torch_geometric.loader import DataLoader
 
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
 from mcc_gcn.data.dataset import GraphDataLoader
+from mcc_gcn.data.learning_curve import (
+    filter_items_by_pair_keys,
+    load_model_pair_keys,
+)
 from mcc_gcn.data.splitting import grouped_stratified_split
 from mcc_gcn.models.gcn import (
     GCNNet,
@@ -54,6 +58,13 @@ def parse_args():
         help=(
             "NPZ reserved for final evaluation. May be repeated. It is loaded "
             "only to verify that no pair enters training or validation."
+        ),
+    )
+    parser.add_argument(
+        "--pair-subset-manifest",
+        help=(
+            "Optional CSV containing unique model_pair_key values. All "
+            "augmented rows for those physical pairs are retained."
         ),
     )
     parser.add_argument("--mol-blocks", default="data/HKU_data.pkl.gz")
@@ -223,6 +234,14 @@ def main():
     os.makedirs(args.save_dir, exist_ok=True)
 
     train_npz, dataset = _load_items(args.data, args)
+    pair_subset_keys = None
+    if args.pair_subset_manifest:
+        pair_subset_keys = load_model_pair_keys(args.pair_subset_manifest)
+        dataset = filter_items_by_pair_keys(dataset, pair_subset_keys)
+        print(
+            "Applied pair subset manifest: "
+            f"{len(pair_subset_keys)} physical pairs, {len(dataset)} rows"
+        )
     if not all(getattr(item, "pair_key", None) for item in dataset):
         if not args.legacy_row_split:
             raise ValueError(
@@ -406,6 +425,12 @@ def main():
         "validation_aggregation": validation_aggregation,
         "train_rows": len(train_items),
         "validation_rows": len(validation_items),
+        "fine_tuning_physical_pairs": len(
+            _pair_keys(dataset, "Fine-tuning data")
+        ),
+        "pair_subset_physical_pairs": (
+            len(pair_subset_keys) if pair_subset_keys is not None else None
+        ),
         "class_weights": class_weights.tolist(),
         "resolved_class_weighting": resolved_weighting,
         "trainable_parameters": trainable,
