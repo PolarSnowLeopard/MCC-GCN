@@ -73,6 +73,68 @@ def _json_compatible_metrics(metrics):
     }
 
 
+def _classification_summary(labels, predictions, num_classes, class_names):
+    per_class_accuracy, balanced_accuracy, overall_accuracy = calculate_metrics(
+        labels,
+        predictions,
+        num_classes,
+    )
+    matrix = confusion_matrix(
+        labels,
+        predictions,
+        labels=list(range(num_classes)),
+    )
+    return {
+        "overall_accuracy": float(overall_accuracy),
+        "balanced_accuracy": float(balanced_accuracy),
+        "per_class_accuracy": {
+            name: float(per_class_accuracy[index])
+            for index, name in enumerate(class_names)
+        },
+        "confusion_matrix": matrix.tolist(),
+    }
+
+
+def _orientation_analysis(
+    labels,
+    probabilities_ab,
+    probabilities_ba,
+    num_classes,
+    class_names,
+):
+    predictions_ab = np.argmax(probabilities_ab, axis=1)
+    predictions_ba = np.argmax(probabilities_ba, axis=1)
+    agreement = predictions_ab == predictions_ba
+    total_variation = 0.5 * np.abs(
+        probabilities_ab - probabilities_ba
+    ).sum(axis=1)
+    return {
+        "predictions_ab": predictions_ab,
+        "predictions_ba": predictions_ba,
+        "agreement": agreement,
+        "total_variation": total_variation,
+        "metrics": {
+            "method": "mean_probability",
+            "agreement_fraction": float(np.mean(agreement)),
+            "disagreement_pairs": int(np.count_nonzero(~agreement)),
+            "mean_total_variation": float(np.mean(total_variation)),
+            "max_total_variation": float(np.max(total_variation)),
+            "a_b": _classification_summary(
+                labels,
+                predictions_ab,
+                num_classes,
+                class_names,
+            ),
+            "b_a": _classification_summary(
+                labels,
+                predictions_ba,
+                num_classes,
+                class_names,
+            ),
+        },
+    }
+
+
 def _batch_pair_keys(batch):
     value = getattr(batch, "pair_key", None)
     if value is None:
@@ -126,6 +188,8 @@ def main():
     all_predictions = []
     all_labels = []
     all_probabilities = []
+    all_probabilities_1 = []
+    all_probabilities_2 = []
     all_pair_keys = []
     pair_keys_present = None
     with torch.no_grad():
@@ -178,10 +242,14 @@ def main():
             all_predictions.extend(np.argmax(probabilities, axis=1))
             all_labels.extend(labels_1)
             all_probabilities.extend(probabilities)
+            all_probabilities_1.extend(probabilities_1.cpu().numpy())
+            all_probabilities_2.extend(probabilities_2.cpu().numpy())
 
     predictions = np.asarray(all_predictions)
     labels = np.asarray(all_labels)
     probabilities = np.asarray(all_probabilities)
+    probabilities_1 = np.asarray(all_probabilities_1)
+    probabilities_2 = np.asarray(all_probabilities_2)
     if np.any(labels < 0) or np.any(labels >= num_classes):
         raise ValueError(
             f"Test labels fall outside configured {num_classes}-class task"
@@ -190,6 +258,13 @@ def main():
         ["negative", "positive"]
         if args.task == "binary"
         else ["negative", "salt", "cocrystal", "hydrate_or_solvate"]
+    )
+    orientation = _orientation_analysis(
+        labels,
+        probabilities_1,
+        probabilities_2,
+        num_classes,
+        class_names,
     )
     per_class_accuracy, balanced_accuracy, overall_accuracy = calculate_metrics(
         labels,
@@ -210,6 +285,14 @@ def main():
     print(f"\nOverall Accuracy: {overall_accuracy:.4f}")
     print(f"Balanced Accuracy: {balanced_accuracy:.4f}")
     print(f"\nConfusion Matrix:\n{matrix}")
+    print(
+        "Orientation Agreement: "
+        f"{orientation['metrics']['agreement_fraction']:.4f}"
+    )
+    print(
+        "Mean Orientation Total Variation: "
+        f"{orientation['metrics']['mean_total_variation']:.4f}"
+    )
     for index, name in enumerate(class_names):
         print(f"{name} Accuracy: {per_class_accuracy[index]:.4f}")
 
@@ -219,8 +302,20 @@ def main():
         "True Label": labels,
         "Predicted Label": predictions,
         "Correct": predictions == labels,
+        "Predicted Label (A_B)": orientation["predictions_ab"],
+        "Predicted Label (B_A)": orientation["predictions_ba"],
+        "Orientation Agreement": orientation["agreement"],
+        "Orientation Total Variation": orientation["total_variation"],
         **{
             f"P({class_names[index]})": probabilities[:, index]
+            for index in range(num_classes)
+        },
+        **{
+            f"P(A_B,{class_names[index]})": probabilities_1[:, index]
+            for index in range(num_classes)
+        },
+        **{
+            f"P(B_A,{class_names[index]})": probabilities_2[:, index]
             for index in range(num_classes)
         },
     }
@@ -229,7 +324,7 @@ def main():
     pd.DataFrame(result_columns).to_csv(output_path, index=False)
 
     metrics = {
-        "schema_version": "mcc-gcn-evaluation-v1",
+        "schema_version": "mcc-gcn-evaluation-v2",
         "task": args.task,
         "num_classes": num_classes,
         "rows": len(labels),
@@ -241,6 +336,7 @@ def main():
         },
         "confusion_matrix": matrix.tolist(),
         "detailed_metrics": _json_compatible_metrics(detailed),
+        "orientation_analysis": orientation["metrics"],
         "model": {
             "path": args.model,
             "sha256": _sha256_file(args.model),

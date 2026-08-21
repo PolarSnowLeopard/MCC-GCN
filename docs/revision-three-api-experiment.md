@@ -44,7 +44,9 @@ current evidence. Binary performance is evaluated on the pooled benchmark.
    occur in both the training and test partitions of an outer fold.
 8. Select the fine-tuning epoch only on an inner pair-grouped validation split,
    then retrain on the complete outer training fold for that epoch count.
-9. Average A/B and B/A probabilities before every reported prediction.
+9. Average A/B and B/A probabilities before every reported prediction, while
+   retaining each orientation's probabilities, label agreement, and
+   total-variation discrepancy for the reviewer-requested order analysis.
 10. Report pooled and per-API metrics, out-of-fold predictions, confusion
     matrices, and stratified bootstrap confidence intervals.
 
