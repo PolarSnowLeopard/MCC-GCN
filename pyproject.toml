@@ -18,5 +18,11 @@ dependencies = [
     "tensorboard>=2.12",
 ]
 
+[project.optional-dependencies]
+analysis = [
+    "matplotlib>=3.7",
+    "umap-learn>=0.5",
+]
+
 [tool.setuptools.packages.find]
 include = ["mcc_gcn*"]
