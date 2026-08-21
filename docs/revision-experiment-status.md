@@ -16,6 +16,7 @@ or response-letter text.
 | Minoxidil-only adaptation | Frozen four-class checkpoint, 20 Minoxidil pairs, all 64 KPX/KPR pairs, three seeds | Does not provide satisfactory transfer. Historical-padding accuracy/BAcc 0.245/0.184; corrected trimming 0.375/0.264; negative recall is 0 in all primary runs |
 | KPXKPR-50 post-FT embedding | Graph, FC1, FC2, logits, probability and projected-space separation metrics | Submitted checkpoint does not produce clear class clusters. FC2 silhouette is 0.0062 and UMAP silhouette is -0.0032; the original positive claim cannot be retained unchanged |
 | Dataset and target counts | Frozen design summary | Source pretraining has 22,307 physical pairs after excluding target APIs; target set has 170 pairs with full per-API/per-class counts |
+| Pretraining undersampling protocol | Controlled full-data/effective-number versus task-specific undersampling comparison on the same target-excluded split | Code, fixed subset construction, feature build, three-seed runner and metric aggregation are ready; formal cluster results remain pending |
 
 Detailed sources:
 
@@ -38,7 +39,7 @@ Detailed sources:
 
 | Reviewer request | Required action | Priority |
 |---|---|---:|
-| Negative-set and undersampling concern | Complete a controlled pretraining comparison using the same target-excluded split: submitted downsampling versus all-data class weighting/effective-number weighting; report false-positive and class-specific behavior | High |
+| Negative-set and undersampling concern | Run the implemented controlled comparison and synchronize its aggregate table; report false-positive and class-specific behavior | High |
 | Fine-tuning protocol disclosure | Correct the supplementary parameter table: executed class weights were `[1,1,1,2]`, not `[1,1,1,1]`; disclose that the historical code used the target holdout for per-epoch validation and replace this with leakage-free revision results | High |
 | Learning-curve result | Recover/synchronize the completed cluster outputs and generate the final table/plot | High |
 | Baseline results | Run and aggregate descriptor and CNN formal benchmarks | High |
