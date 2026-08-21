@@ -27,9 +27,9 @@ from torch_geometric.loader import DataLoader
 
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
 from mcc_gcn.data.dataset import GraphDataLoader
+from mcc_gcn.data.legacy import load_legacy_dense_items
 from mcc_gcn.models.gcn import GCNNet
 from mcc_gcn.utils import seed_everything
-
 
 CLASS_NAMES = ["Negative", "Salt", "Cocrystal", "Hydrate/solvate"]
 CLASS_COLORS = ["#6B7280", "#D97706", "#2E8B57", "#277DA1"]
@@ -73,28 +73,8 @@ def _sha256(path: str | Path) -> str:
     return digest.hexdigest()
 
 
-def _legacy_padded_items(path: str | Path) -> list[Data]:
-    data = np.load(path, allow_pickle=True)
-    required = {"V", "A", "labels"}
-    missing = required.difference(data.files)
-    if missing:
-        raise ValueError(f"Legacy feature file is missing {sorted(missing)}")
-    items = []
-    for index in range(len(data["labels"])):
-        x = torch.as_tensor(data["V"][index], dtype=torch.float32)
-        adjacency = torch.as_tensor(data["A"][index], dtype=torch.float32)
-        edge_index = torch.nonzero(
-            adjacency.sum(dim=1),
-            as_tuple=False,
-        ).t()
-        items.append(
-            Data(
-                x=x,
-                edge_index=edge_index,
-                y=torch.as_tensor(data["labels"][index], dtype=torch.long),
-            )
-        )
-    return items
+def _legacy_padded_items(path: str | Path):
+    return load_legacy_dense_items(path, preserve_padding=True)
 
 
 def _load_items(path: str | Path, input_mode: str) -> list[Data]:
