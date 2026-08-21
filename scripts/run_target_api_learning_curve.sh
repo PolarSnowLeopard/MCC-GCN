@@ -247,4 +247,8 @@ for seed in $SEEDS; do
   done
 done
 
+python "$ROOT/scripts/summarize_target_api_runs.py" \
+  --run-dir "$OUTDIR" \
+  --output-dir "$OUTDIR/multiseed-summary"
+
 echo "Target-API learning curve complete: $OUTDIR"
