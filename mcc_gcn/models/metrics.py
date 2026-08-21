@@ -1,6 +1,8 @@
 import numpy as np
 from sklearn.metrics import (
-    confusion_matrix, accuracy_score, precision_recall_fscore_support,
+    accuracy_score,
+    confusion_matrix,
+    precision_recall_fscore_support,
 )
 
 
@@ -23,16 +25,42 @@ def calculate_detailed_metrics(labels, preds, num_classes=4):
     """Per-class and macro precision, recall, F1."""
     class_labels = list(range(num_classes))
     precision, recall, f1, _ = precision_recall_fscore_support(
-        labels, preds, labels=class_labels, average=None, zero_division=0,
+        labels,
+        preds,
+        labels=class_labels,
+        average=None,
+        zero_division=0,
     )
     macro_p, macro_r, macro_f1, _ = precision_recall_fscore_support(
-        labels, preds, labels=class_labels, average='macro', zero_division=0,
+        labels,
+        preds,
+        labels=class_labels,
+        average="macro",
+        zero_division=0,
     )
     return {
-        'per_class_precision': precision,
-        'per_class_recall': recall,
-        'per_class_f1': f1,
-        'macro_precision': macro_p,
-        'macro_recall': macro_r,
-        'macro_f1': macro_f1,
+        "per_class_precision": precision,
+        "per_class_recall": recall,
+        "per_class_f1": f1,
+        "macro_precision": macro_p,
+        "macro_recall": macro_r,
+        "macro_f1": macro_f1,
+    }
+
+
+def calculate_chance_baselines(labels, num_classes=4):
+    """Return prevalence-weighted and majority-class chance accuracies."""
+    labels = np.asarray(labels, dtype=np.int64)
+    if labels.ndim != 1 or len(labels) == 0:
+        raise ValueError("labels must be a non-empty one-dimensional array")
+    if np.any(labels < 0) or np.any(labels >= num_classes):
+        raise ValueError("labels fall outside the configured classes")
+    counts = np.bincount(labels, minlength=num_classes)
+    prevalence = counts / counts.sum()
+    return {
+        "sample_count": int(counts.sum()),
+        "class_counts": counts,
+        "class_prevalence": prevalence,
+        "prevalence_weighted_expected_accuracy": float(np.square(prevalence).sum()),
+        "majority_class_accuracy": float(prevalence.max()),
     }
