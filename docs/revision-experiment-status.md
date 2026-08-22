@@ -17,6 +17,7 @@ or response-letter text.
 | KPXKPR-50 post-FT embedding | Graph, FC1, FC2, logits, probability and projected-space separation metrics | Submitted checkpoint does not produce clear class clusters. FC2 silhouette is 0.0062 and UMAP silhouette is -0.0032; the original positive claim cannot be retained unchanged |
 | Dataset and target counts | Frozen design summary | Source pretraining has 22,307 physical pairs after excluding target APIs; target set has 170 pairs with full per-API/per-class counts |
 | Pretraining undersampling | Controlled full-data/effective-number versus task-specific undersampling comparison on the same target-excluded split; 12/12 runs complete | Four-class full-data training raises target accuracy from 0.402 to 0.569 and macro F1 from 0.371 to 0.401; binary undersampling raises target BAcc from 0.768 to 0.849 and reduces negative FPR from 0.383 to 0.160, showing a task-dependent trade-off |
+| Fine-tuning learning curve | Nested 8/16/32/48-pair target subsets, five grouped outer folds, three model seeds; 24/24 summaries and 120/120 outer-fold evaluations complete | Four-class BAcc rises monotonically from 0.388 zero-shot to 0.666 with 48 pairs and 0.734 with all 136 pairs; binary BAcc approaches saturation earlier, reaching 0.807 with 48 pairs versus 0.824 with all pairs |
 
 Detailed sources:
 
@@ -26,13 +27,13 @@ Detailed sources:
 - `docs/revision-minoxidil-only-results.md`
 - `docs/revision-chance-baselines.md`
 - `docs/revision-pretrain-undersampling-results.md`
+- `docs/revision-target-api-learning-curve-results.md`
 - `runs/revision-kpxkpr50-embedding/kpxkpr50_post_finetune_embedding.metrics.json`
 
 ## Implemented but missing formal result artifacts
 
 | Experiment | Implementation | What remains |
 |---|---|---|
-| Fine-tuning learning curve | Nested, class-balanced 8/16/32/48-pair subsets for every fold and seed | A cluster run was reported complete, but its formal output directory has not been synchronized back; aggregate and verify before citation |
 | Descriptor baselines | Order-invariant RDKit descriptors with SVM, RF and MLP; source zero-shot and target-supervised five-fold protocols | Run all models/tasks/seeds and synchronize the formal summary |
 | Randomized-SMILES CNN | Independent two-branch CNN with physical-pair splitting before SMILES randomization and orientation averaging | Run all tasks/seeds and synchronize the formal summary; identify it as the implemented randomized-SMILES CNN, not the separately published DeepCocrystal software |
 
@@ -41,7 +42,6 @@ Detailed sources:
 | Reviewer request | Required action | Priority |
 |---|---|---:|
 | Fine-tuning protocol disclosure | Correct the supplementary parameter table: executed class weights were `[1,1,1,2]`, not `[1,1,1,1]`; disclose that the historical code used the target holdout for per-epoch validation and replace this with leakage-free revision results | High |
-| Learning-curve result | Recover/synchronize the completed cluster outputs and generate the final table/plot | High |
 | Baseline results | Run and aggregate descriptor and CNN formal benchmarks | High |
 | Dataset overlap figure | Render the already locked set relationships: KPXKPR-64 = 14 adaptation + 50 holdout; FT-34 = 20 Minoxidil + 14 KPX/KPR | Medium |
 | Common solvent/hydrate analysis | Identify water/methanol/ethanol-related entries that are actually represented and report scope without inventing unperformed wet experiments | Medium |
