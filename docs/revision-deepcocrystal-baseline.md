@@ -15,16 +15,22 @@ after the physical-pair split, and averages the two input orders at inference.
 Only seed 42 is run; no hyperparameter search or repeated-seed aggregate is
 required.
 
+The isolated environment uses TensorFlow 2.18.1 with the maintained legacy
+`tf.keras` compatibility package because the official implementation was
+written for TensorFlow 2.7.1. The official DeepCocrystal source itself remains
+unmodified.
+
 The official source is licensed under the Academic Software Licence. It must
 remain a separate checkout and is not copied into or redistributed with this
 repository.
 
 ```bash
-git clone https://github.com/molML/deep-cocrystal.git \
-  /workspace/deep-cocrystal
+cd /workspace/MCC-GCN
+bash scripts/bootstrap_deepcocrystal_env.sh
 
 RUN_ID="revision-three-api-deepcocrystal-seed42"
-python scripts/run_deepcocrystal_architecture_baseline.py \
+/workspace/venvs/deepcocrystal-tf218/bin/python \
+  scripts/run_deepcocrystal_architecture_baseline.py \
   --data-root data/revision-three-api \
   --deepcocrystal-repo /workspace/deep-cocrystal \
   --output-dir "runs/$RUN_ID" \

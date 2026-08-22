@@ -182,6 +182,8 @@ def main():
     sys.path.insert(0, str(official_repo))
 
     try:
+        # The official implementation targets the TensorFlow 2.7 Keras API.
+        os.environ.setdefault("TF_USE_LEGACY_KERAS", "1")
         import tensorflow as tf
         from deepcocrystal import smiles_preprocessing
         from deepcocrystal.deepcocrystal import DeepCocrystal
