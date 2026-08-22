@@ -1,6 +1,6 @@
 # Revision experiment status
 
-Last updated: 2026-08-22. This is an internal execution record, not manuscript
+Last updated: 2026-08-23. This is an internal execution record, not manuscript
 or response-letter text.
 
 ## Ready results
@@ -16,6 +16,8 @@ or response-letter text.
 | Minoxidil-only adaptation | Frozen four-class checkpoint, 20 Minoxidil pairs, all 64 KPX/KPR pairs, three seeds | Does not provide satisfactory transfer. Historical-padding accuracy/BAcc 0.245/0.184; corrected trimming 0.375/0.264; negative recall is 0 in all primary runs |
 | KPXKPR-50 post-FT embedding | Graph, FC1, FC2, logits, probability and projected-space separation metrics | Submitted checkpoint does not produce clear class clusters. FC2 silhouette is 0.0062 and UMAP silhouette is -0.0032; the original positive claim cannot be retained unchanged |
 | Dataset and target counts | Frozen design summary | Source pretraining has 22,307 physical pairs after excluding target APIs; target set has 170 pairs with full per-API/per-class counts |
+| Target coformer diversity | Connectivity and functional-group audit of the 170 target pairs | The benchmark contains 148 unique coformer connectivity groups; 79 do not contain a carboxylic acid/carboxylate group, so the added set is not restricted to carboxylic acids |
+| Cross-class pair overlap | Pair-level audit before conflict quarantine | 241 positive-data pairs have conflicting solid-form labels; 186 occur across salt/cocrystal and hydrate/solvate labels, while 39 occur across salt and cocrystal labels |
 | Pretraining undersampling | Controlled full-data/effective-number versus task-specific undersampling comparison on the same target-excluded split; 12/12 runs complete | Four-class full-data training raises target accuracy from 0.402 to 0.569 and macro F1 from 0.371 to 0.401; binary undersampling raises target BAcc from 0.768 to 0.849 and reduces negative FPR from 0.383 to 0.160, showing a task-dependent trade-off |
 | Fine-tuning learning curve | Nested 8/16/32/48-pair target subsets, five grouped outer folds, three model seeds; 24/24 summaries and 120/120 outer-fold evaluations complete | Four-class BAcc rises monotonically from 0.388 zero-shot to 0.666 with 48 pairs and 0.734 with all 136 pairs; binary BAcc approaches saturation earlier, reaching 0.807 with 48 pairs versus 0.824 with all pairs |
 
@@ -34,8 +36,9 @@ Detailed sources:
 
 | Experiment | Implementation | What remains |
 |---|---|---|
-| Descriptor baselines | Order-invariant RDKit descriptors with SVM, RF and MLP; source zero-shot and target-supervised five-fold protocols | Run all models/tasks/seeds and synchronize the formal summary |
-| Randomized-SMILES CNN | Independent two-branch CNN with physical-pair splitting before SMILES randomization and orientation averaging | Run all tasks/seeds and synchronize the formal summary; identify it as the implemented randomized-SMILES CNN, not the separately published DeepCocrystal software |
+| Descriptor baselines | Order-invariant RDKit descriptors with SVM, RF and MLP; source zero-shot and target-supervised five-fold protocols | Run both tasks with fixed seed 42 and synchronize the summary |
+| Randomized-SMILES CNN | Independent two-branch CNN with physical-pair splitting before SMILES randomization and orientation averaging | Run both tasks with fixed seed 42 and synchronize the summary; identify it as the implemented randomized-SMILES CNN, not the separately published DeepCocrystal software |
+| DeepCocrystal architecture | Minimal binary runner that imports an unmodified official checkout and uses the target-API-excluded source split | Run seed 42 after the current CNN releases the GPU; do not use the distributed checkpoint because its training data contain all three target APIs and its original label definition differs from this manuscript |
 
 ## Still required
 

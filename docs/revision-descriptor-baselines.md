@@ -24,7 +24,8 @@ versions are written to `experiment_config.json`.
 - Class-balanced sample weights are computed from each training set.
 - The target-supervised classical models are controls for limited target-domain
   supervision. They are not described as fine-tuned or pretrained models.
-- Three seeds are aggregated as mean and sample standard deviation.
+- Seed 42 is fixed for reproducibility; repeated-seed aggregation is not part
+  of the minimal revision comparison.
 
 ## Formal command
 
@@ -35,7 +36,7 @@ python scripts/run_target_api_descriptor_baselines.py \
   --output-dir "runs/$RUN_ID" \
   --tasks binary,four-class \
   --models svm,random_forest,mlp \
-  --seeds 42,43,44 \
+  --seeds 42 \
   --folds 5 \
   2>&1 | tee "$RUN_ID.log"
 ```

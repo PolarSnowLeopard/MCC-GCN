@@ -44,7 +44,7 @@ python scripts/run_target_api_smiles_cnn.py \
   --data-root data/revision-three-api \
   --output-dir "runs/$RUN_ID" \
   --tasks binary,four-class \
-  --seeds 42,43,44 \
+  --seeds 42 \
   --folds 5 \
   --tensorboard-root "/primus_oss/summary/mcc-gcn/$RUN_ID" \
   2>&1 | tee "$RUN_ID.log"
