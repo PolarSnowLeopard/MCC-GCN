@@ -49,3 +49,6 @@ class-specific metrics, per-API metrics, and negative false-positive rate.
 
 This is a controlled revision ablation. It should not be described as an exact
 reconstruction of every historical notebook operation.
+
+Formal results and their interpretation are recorded in
+`docs/revision-pretrain-undersampling-results.md`.
