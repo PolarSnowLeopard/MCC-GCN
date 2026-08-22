@@ -1,3 +1,4 @@
+import csv
 import json
 import tempfile
 import unittest
@@ -87,6 +88,42 @@ class TargetAPIRunSummaryTest(unittest.TestCase):
                     )
                 with self.assertRaisesRegex(ValueError, "Duplicate result"):
                     collect_results([first, second])
+
+    def test_counts_full_fine_tuning_pairs_from_split_manifest(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            self._write_summary(
+                root,
+                "binary",
+                42,
+                Path("oof-summary"),
+                0.8,
+                0.7,
+            )
+            manifest = (
+                root
+                / "binary"
+                / "seed-42"
+                / "fold-0"
+                / "selection"
+                / "split_manifest.csv"
+            )
+            manifest.parent.mkdir(parents=True, exist_ok=True)
+            with manifest.open("w", newline="", encoding="utf-8") as handle:
+                writer = csv.DictWriter(
+                    handle,
+                    fieldnames=["pair_key", "split"],
+                )
+                writer.writeheader()
+                for index in range(136):
+                    writer.writerow(
+                        {"pair_key": f"pair-{index}", "split": "train"}
+                    )
+
+            rows = collect_results([root])
+
+        self.assertEqual(len(rows), 1)
+        self.assertEqual(rows[0]["fine_tuning_pairs"], 136)
 
 
 if __name__ == "__main__":

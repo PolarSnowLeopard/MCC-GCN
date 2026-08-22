@@ -54,9 +54,7 @@ def _fine_tuning_pairs(path: Path, stage: str, size: int | None) -> int:
         return size
     seed_dir = path.parent.parent
     config_path = seed_dir / "fold-0" / "final" / "run_config.json"
-    if not config_path.is_file():
-        return 0
-    config = _read_json(config_path)
+    config = _read_json(config_path) if config_path.is_file() else {}
     explicit = config.get("fine_tuning_physical_pairs")
     if explicit is not None:
         return int(explicit)
