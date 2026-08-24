@@ -6,6 +6,7 @@ import pandas as pd
 from scripts.run_deepcocrystal_architecture_baseline import (
     _binary_labels,
     _class_weights,
+    _clean_smiles,
     _training_arrays,
 )
 
@@ -44,6 +45,26 @@ class DeepCocrystalBaselineTest(unittest.TestCase):
         weights = _class_weights(np.asarray([0, 1, 1, 1]))
 
         self.assertGreater(weights[0], weights[1])
+
+    def test_extended_stereo_uses_rdkit_fallback_without_dropping_row(self):
+        smiles = "F[S@OH22](F)(F)F"
+        report = {
+            "rdkit_stereo_fallback_count": 0,
+            "rdkit_stereo_fallback_examples": [],
+        }
+
+        cleaned = _clean_smiles(
+            [smiles],
+            clean_smiles=lambda *_args, **_kwargs: None,
+            preprocessing_report=report,
+        )
+
+        self.assertEqual(len(cleaned), 1)
+        self.assertEqual(report["rdkit_stereo_fallback_count"], 1)
+        self.assertEqual(
+            report["rdkit_stereo_fallback_examples"][0]["smiles"],
+            smiles,
+        )
 
 
 if __name__ == "__main__":

@@ -20,6 +20,13 @@ The isolated environment uses TensorFlow 2.18.1 with the maintained legacy
 written for TensorFlow 2.7.1. The official DeepCocrystal source itself remains
 unmodified.
 
+The official string-based stereochemistry removal corrupts extended RDKit
+stereochemistry tokens such as `@TB` and `@OH`. For source rows rejected only
+for this reason, the runner falls back to RDKit's molecule-level
+`RemoveStereochemistry` and then applies the same uncharging and canonicalizing
+steps. No source pair is silently discarded, and the fallback count and sample
+SMILES are recorded in `summary.json`.
+
 The official source is licensed under the Academic Software Licence. It must
 remain a separate checkout and is not copied into or redistributed with this
 repository.

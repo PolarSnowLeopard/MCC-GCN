@@ -14,6 +14,7 @@ from pathlib import Path
 import numpy as np
 import pandas as pd
 from rdkit import Chem, rdBase
+from rdkit.Chem.MolStandardize import rdMolStandardize
 from sklearn.metrics import balanced_accuracy_score, confusion_matrix
 
 
@@ -66,18 +67,43 @@ def _binary_labels(table: pd.DataFrame) -> np.ndarray:
     )
 
 
-def _clean_smiles(values, clean_smiles):
-    cleaned = [
-        clean_smiles(
-            str(value),
+def _rdkit_clean_smiles_fallback(value: str) -> str | None:
+    molecule = Chem.MolFromSmiles(value)
+    if molecule is None:
+        return None
+    Chem.RemoveStereochemistry(molecule)
+    molecule = rdMolStandardize.Uncharger().uncharge(molecule)
+    return Chem.MolToSmiles(
+        molecule,
+        canonical=True,
+        isomericSmiles=False,
+    )
+
+
+def _clean_smiles(values, clean_smiles, preprocessing_report=None):
+    cleaned = []
+    for index, value in enumerate(values):
+        original = str(value)
+        result = clean_smiles(
+            original,
             uncharge=True,
             remove_stereochemistry=True,
             to_canonical=True,
         )
-        for value in values
-    ]
-    if any(value is None for value in cleaned):
-        raise ValueError("DeepCocrystal preprocessing rejected a SMILES")
+        if result is None:
+            result = _rdkit_clean_smiles_fallback(original)
+            if result is not None and preprocessing_report is not None:
+                preprocessing_report["rdkit_stereo_fallback_count"] += 1
+                if len(preprocessing_report["rdkit_stereo_fallback_examples"]) < 10:
+                    preprocessing_report["rdkit_stereo_fallback_examples"].append(
+                        {"row_index": int(index), "smiles": original}
+                    )
+        if result is None:
+            raise ValueError(
+                "DeepCocrystal preprocessing rejected an invalid SMILES at "
+                f"row {index}: {original}"
+            )
+        cleaned.append(result)
     return cleaned
 
 
@@ -108,9 +134,20 @@ def _randomized_variants(smiles: str, count: int, seed: int) -> list[str]:
     return [unique[index % len(unique)] for index in range(count)]
 
 
-def _training_arrays(table, labels, variants, seed, clean_smiles):
-    left = _clean_smiles(table["reactant_A"], clean_smiles)
-    right = _clean_smiles(table["reactant_B"], clean_smiles)
+def _training_arrays(
+    table,
+    labels,
+    variants,
+    seed,
+    clean_smiles,
+    preprocessing_report=None,
+):
+    left = _clean_smiles(
+        table["reactant_A"], clean_smiles, preprocessing_report
+    )
+    right = _clean_smiles(
+        table["reactant_B"], clean_smiles, preprocessing_report
+    )
     output_left = []
     output_right = []
     output_labels = []
@@ -137,9 +174,17 @@ def _training_arrays(table, labels, variants, seed, clean_smiles):
     return output_left, output_right, np.asarray(output_labels, dtype=np.int64)
 
 
-def _evaluation_arrays(table, clean_smiles):
-    left = np.asarray(_clean_smiles(table["reactant_A"], clean_smiles))
-    right = np.asarray(_clean_smiles(table["reactant_B"], clean_smiles))
+def _evaluation_arrays(table, clean_smiles, preprocessing_report=None):
+    left = np.asarray(
+        _clean_smiles(
+            table["reactant_A"], clean_smiles, preprocessing_report
+        )
+    )
+    right = np.asarray(
+        _clean_smiles(
+            table["reactant_B"], clean_smiles, preprocessing_report
+        )
+    )
     return left, right
 
 
@@ -204,6 +249,13 @@ def main():
     train_labels = _binary_labels(train)
     validation_labels = _binary_labels(validation)
     target_labels = _binary_labels(target)
+    preprocessing_reports = {
+        split: {
+            "rdkit_stereo_fallback_count": 0,
+            "rdkit_stereo_fallback_examples": [],
+        }
+        for split in ("source_train", "source_validation", "target_test")
+    }
 
     train_left, train_right, augmented_train_labels = _training_arrays(
         train,
@@ -211,6 +263,7 @@ def main():
         args.smiles_variants,
         args.seed,
         smiles_preprocessing.clean_smiles,
+        preprocessing_reports["source_train"],
     )
     validation_left, validation_right, augmented_validation_labels = (
         _training_arrays(
@@ -219,6 +272,7 @@ def main():
             1,
             args.seed + 100000,
             smiles_preprocessing.clean_smiles,
+            preprocessing_reports["source_validation"],
         )
     )
     train_left = _space_separate(
@@ -276,6 +330,7 @@ def main():
     target_left, target_right = _evaluation_arrays(
         target,
         smiles_preprocessing.clean_smiles,
+        preprocessing_reports["target_test"],
     )
     target_left_tokens = _space_separate(
         target_left,
@@ -333,6 +388,7 @@ def main():
         "orientation_training": "both_orders_after_physical_pair_split",
         "orientation_inference": "mean_probability",
         "class_weighting": "inverse_frequency",
+        "preprocessing": preprocessing_reports,
         "epochs_completed": len(history.history["loss"]),
         "accuracy": accuracy,
         "balanced_accuracy": balanced_accuracy,
